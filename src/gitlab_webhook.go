@@ -49,64 +49,80 @@ type Response struct {
 
 var masterAbsPath string
 
+func genResponseStr(status string, message string) []byte {
+	resp := Response {
+		Status: status,
+		Msg: message,
+	}
+	responseContent, _ := json.MarshalIndent(resp, "", "    ")
+	return responseContent
+}
+
 func HookHandler(w http.ResponseWriter, req *http.Request) {
-	if req.Method == "GET" {
+
+	// 非POST请求的处理
+	if req.Method != "POST" {
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte("Hello, World!\n"));
-	} else {
-		contentContainer := make([]byte, req.ContentLength)
-		_, err := req.Body.Read(contentContainer)
+		w.Write(genResponseStr("Failed", "请使用POST请求"));
+		return
+	}
+	// POST请求的处理
+	contentContainer := make([]byte, req.ContentLength)
+	_, err := req.Body.Read(contentContainer)
+	if err != nil {
+		log.Fatal("Read request body: ", err)
+		w.Write(genResponseStr("Error", "系统错误！"))
+		return
+	}
+	var prb PushRequestBody
+	err = json.Unmarshal(contentContainer, &prb)
+	if err != nil {
+		log.Fatal("请求内容非JSON格式：", err)
+		w.Write(genResponseStr("Failed", "请求内容非JSON格式！"))
+		return
+	}
+	if prb.Ref == "refs/heads/master" {
+		// 获取当前目录，用于切换回来
+		pwd, _ := os.Getwd()
+		// 切换当前目录到master分支的代码目录
+		err := os.Chdir(masterAbsPath)
 		if err != nil {
-			log.Fatal("Read request body: ", err)
-			w.Write([]byte("系统错误！"))
-		}
-		var prb PushRequestBody
-		err = json.Unmarshal(contentContainer, &prb)
-		if err != nil {
-			log.Fatal("请求内容非JSON格式：", err)
-			w.Write([]byte("请求内容非JSON格式！"))
+			w.Write(genResponseStr("Error", "系统错误！"))
 			return
 		}
-		if prb.Ref == "refs/heads/master" {
-			// 获取当前目录，用于切换回来
-			pwd, _ := os.Getwd()
-			// 切换当前目录到master分支的代码目录
-			err := os.Chdir(masterAbsPath)
-			if err != nil {
-				w.Write([]byte("系统错误！"))
-				return
-			}
-			// 先清除可能存在的本地变更
-			checkoutCmd := exec.Command("git", "checkout", "*")
-			output, err := checkoutCmd.Output()
-			if err != nil {
-				log.Println(err)
-			}
-			log.Println(string(output))
-			// 然后从可能的非master分支切换回master
-			checkoutMasterCmd := exec.Command("git", "checkout", "master")
-			output, err = checkoutMasterCmd.Output()
-			if err != nil {
-				log.Println(err)
-			}
-			log.Println(string(output))
-			// 然后pull
-			pullCmd := exec.Command("git", "pull", "origin", "master")
-			output, err = pullCmd.Output()
-			if err != nil {
-				log.Println(err)
-			}
-			log.Println(string(output))
-			// 切换回原工作目录
-			os.Chdir(pwd)
+		// 先清除可能存在的本地变更
+		checkoutCmd := exec.Command("git", "checkout", "*")
+		output, err := checkoutCmd.Output()
+		if err != nil {
+			log.Println(err)
+			w.Write(genResponseStr("Failed", "清除本地变更失败！"))
+			return
 		}
+		log.Println(string(output))
+		// 然后从可能的非master分支切换回master
+		checkoutMasterCmd := exec.Command("git", "checkout", "master")
+		output, err = checkoutMasterCmd.Output()
+		if err != nil {
+			log.Println(err)
+			w.Write(genResponseStr("Failed", "工作目录切换到master失败"))
+			return
+		}
+		log.Println(string(output))
+		// 然后pull
+		pullCmd := exec.Command("git", "pull", "origin", "master")
+		output, err = pullCmd.Output()
+		if err != nil {
+			log.Println(err)
+			w.Write(genResponseStr("Failed", "Git Pull失败！"))
+			return
+		}
+		log.Println(string(output))
+		// 切换回原工作目录
+		os.Chdir(pwd)
+
 		w.Header().Set("Content-Type", "application/json")
-		resp := Response {
-			Status: "success",
-			Msg: "成功！",
-		}
-		responseContent, _ := json.MarshalIndent(resp, "", "    ")
-		w.Write([]byte(responseContent))
+
+		w.Write(genResponseStr("success", "自动更新成功！"))
 	}
 }
 
