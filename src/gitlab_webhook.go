@@ -60,6 +60,7 @@ func genResponseStr(status string, message string) []byte {
 
 func HookHandler(w http.ResponseWriter, req *http.Request) {
 
+	w.Header().Set("Content-Type", "application/json")
 	// 非POST请求的处理
 	if req.Method != "POST" {
 		w.Header().Set("Content-Type", "text/plain")
@@ -123,9 +124,6 @@ func HookHandler(w http.ResponseWriter, req *http.Request) {
 	log.Println(string(output))
 	// 切换回原工作目录
 	os.Chdir(pwd)
-
-	w.Header().Set("Content-Type", "application/json")
-
 	w.Write(genResponseStr("success", "自动更新成功！"))
 }
 
