@@ -81,49 +81,52 @@ func HookHandler(w http.ResponseWriter, req *http.Request) {
 		w.Write(genResponseStr("Failed", "请求内容非JSON格式！"))
 		return
 	}
-	if prb.Ref == "refs/heads/master" {
-		// 获取当前目录，用于切换回来
-		pwd, _ := os.Getwd()
-		// 切换当前目录到master分支的代码目录
-		err := os.Chdir(masterAbsPath)
-		if err != nil {
-			w.Write(genResponseStr("Error", "系统错误！"))
-			return
-		}
-		// 先清除可能存在的本地变更
-		checkoutCmd := exec.Command("git", "checkout", "*")
-		output, err := checkoutCmd.Output()
-		if err != nil {
-			log.Println(err)
-			w.Write(genResponseStr("Failed", "清除本地变更失败！"))
-			return
-		}
-		log.Println(string(output))
-		// 然后从可能的非master分支切换回master
-		checkoutMasterCmd := exec.Command("git", "checkout", "master")
-		output, err = checkoutMasterCmd.Output()
-		if err != nil {
-			log.Println(err)
-			w.Write(genResponseStr("Failed", "工作目录切换到master失败"))
-			return
-		}
-		log.Println(string(output))
-		// 然后pull
-		pullCmd := exec.Command("git", "pull", "origin", "master")
-		output, err = pullCmd.Output()
-		if err != nil {
-			log.Println(err)
-			w.Write(genResponseStr("Failed", "Git Pull失败！"))
-			return
-		}
-		log.Println(string(output))
-		// 切换回原工作目录
-		os.Chdir(pwd)
-
-		w.Header().Set("Content-Type", "application/json")
-
-		w.Write(genResponseStr("success", "自动更新成功！"))
+	if prb.Ref != "refs/heads/master" {
+		log.Println("非master的push")
+		w.Write(genResponseStr("success", "非master的push，所以未做什么具体的操作！"))
+		return
 	}
+	// 获取当前目录，用于切换回来
+	pwd, _ := os.Getwd()
+	// 切换当前目录到master分支的代码目录
+	err = os.Chdir(masterAbsPath)
+	if err != nil {
+		w.Write(genResponseStr("Error", "系统错误！"))
+		return
+	}
+	// 先清除可能存在的本地变更
+	checkoutCmd := exec.Command("git", "checkout", "*")
+	output, err := checkoutCmd.Output()
+	if err != nil {
+		log.Println(err)
+		w.Write(genResponseStr("Failed", "清除本地变更失败！"))
+		return
+	}
+	log.Println(string(output))
+	// 然后从可能的非master分支切换回master
+	checkoutMasterCmd := exec.Command("git", "checkout", "master")
+	output, err = checkoutMasterCmd.Output()
+	if err != nil {
+		log.Println(err)
+		w.Write(genResponseStr("Failed", "工作目录切换到master失败"))
+		return
+	}
+	log.Println(string(output))
+	// 然后pull
+	pullCmd := exec.Command("git", "pull", "origin", "master")
+	output, err = pullCmd.Output()
+	if err != nil {
+		log.Println(err)
+		w.Write(genResponseStr("Failed", "Git Pull失败！"))
+		return
+	}
+	log.Println(string(output))
+	// 切换回原工作目录
+	os.Chdir(pwd)
+
+	w.Header().Set("Content-Type", "application/json")
+
+	w.Write(genResponseStr("success", "自动更新成功！"))
 }
 
 func main() {
