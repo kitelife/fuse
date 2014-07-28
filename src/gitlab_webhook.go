@@ -68,15 +68,9 @@ func HookHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	// POST请求的处理
-	contentContainer := make([]byte, req.ContentLength)
-	_, err := req.Body.Read(contentContainer)
-	if err != nil {
-		log.Fatal("Read request body: ", err)
-		w.Write(genResponseStr("Error", "系统错误！"))
-		return
-	}
 	var prb PushRequestBody
-	err = json.Unmarshal(contentContainer, &prb)
+	eventDecoder := json.NewDecoder(req.Body)
+	err := eventDecoder.Decode(&prb)
 	if err != nil {
 		log.Fatal("请求内容非JSON格式：", err)
 		w.Write(genResponseStr("Failed", "请求内容非JSON格式！"))
