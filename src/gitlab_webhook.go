@@ -1,11 +1,11 @@
 package main
 
 import (
-	"log"
-	"net/http"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -50,9 +50,9 @@ type Response struct {
 var masterAbsPath string
 
 func genResponseStr(status string, message string) []byte {
-	resp := Response {
+	resp := Response{
 		Status: status,
-		Msg: message,
+		Msg:    message,
 	}
 	responseContent, _ := json.MarshalIndent(resp, "", "    ")
 	return responseContent
@@ -64,7 +64,7 @@ func HookHandler(w http.ResponseWriter, req *http.Request) {
 	// 非POST请求的处理
 	if req.Method != "POST" {
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write(genResponseStr("Failed", "请使用POST请求"));
+		w.Write(genResponseStr("Failed", "请使用POST请求"))
 		return
 	}
 	// POST请求的处理
@@ -108,7 +108,7 @@ func HookHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	log.Println(string(output))
 	// 然后pull
-	pullCmd := exec.Command("git", "pull", "origin", "master")
+	pullCmd := exec.Command("git", "pull", "-p")
 	output, err = pullCmd.Output()
 	if err != nil {
 		log.Println(err)
