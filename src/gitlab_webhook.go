@@ -76,6 +76,11 @@ func HookHandler(w http.ResponseWriter, req *http.Request) {
 		w.Write(genResponseStr("Failed", "请求内容非JSON格式！"))
 		return
 	}
+
+	// 记录日志
+	reqBodyStr, _ := json.MarshalIndent(prb, "", "    ")
+	log.Println(string(reqBodyStr))
+
 	if prb.Ref != "refs/heads/master" {
 		log.Println("非master的push")
 		w.Write(genResponseStr("success", "非master的push，所以未做什么具体的操作！"))
