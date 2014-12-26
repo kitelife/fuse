@@ -13,38 +13,8 @@ import (
 
     "github.com/go-martini/martini"
     _ "github.com/mattn/go-sqlite3"
+    "plugins"
 )
-
-type ReposInfo struct {
-    Name        string
-    Url         string
-    Description string
-    Homepage    string
-}
-
-type CommitAuthorInfo struct {
-    Name  string
-    Email string
-}
-
-type CommitInfo struct {
-    Id        string
-    Message   string
-    Timestamp string
-    Url       string
-    Author    CommitAuthorInfo
-}
-
-type PushRequestBody struct {
-    Before     string
-    After      string
-    Ref        string
-    User_id    int
-    User_name  string
-    Project_id int
-    Repository ReposInfo
-    Commits    []CommitInfo
-}
 
 type Response struct {
     Status string
@@ -110,6 +80,7 @@ func HookHandler(w http.ResponseWriter, req *http.Request) {
     w.Header().Set("Content-Type", "application/json")
 
     // POST请求的处理
+    /*
     var prb PushRequestBody
     eventDecoder := json.NewDecoder(req.Body)
     err := eventDecoder.Decode(&prb)
@@ -118,7 +89,6 @@ func HookHandler(w http.ResponseWriter, req *http.Request) {
         w.Write(genResponseStr("Failed", "请求内容非JSON格式！"))
         return
     }
-
     // 记录日志
     reqBodyStr, _ := json.MarshalIndent(prb, "", "    ")
     // log.Println(string(reqBodyStr))
@@ -140,6 +110,13 @@ func HookHandler(w http.ResponseWriter, req *http.Request) {
         return
     }
 
+    */
+    
+    targetPlugin := plugins.Dispatch(req)
+    reposRemoteURL, branchName, err := targetPlugin.parse()
+    if err != nil {
+    
+    }
     targetDir, ok := thatBranch2Dir[branchName]
     if ok == false {
         log.Fatalln("未针对该分支配置对应的Hook！", branchName)
