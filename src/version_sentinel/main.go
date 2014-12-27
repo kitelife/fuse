@@ -21,33 +21,58 @@ type Response struct {
     Msg    string
 }
 
+type Repos struct {
+    repos_id int,
+    repos_name string
+    repos_remote string
+}
+
 type Hook struct {
-    TargetDir   string
-    ReposName   string
-    ReposRemote string
+    HookID int
+    repos_id int
     WhichBranch string
+    TargetDir   string
 }
 
 type Branch2Dir map[string]string
 
-var hooks map[string]Branch2Dir = make(map[string]Branch2Dir)
-var repos map[string]string = make(map[string]string)
+var hooks map[int]Hook = make(map[int]Hook)
+var repos map[int]Repos = make(map[index]Repos)
+var reposBranch2Dir map[int]Branch2Dir = make(map[int]Branch2Dir)
+
 var masterAbsPath string
 var db *sql.DB
 
 func initFromDB() (err error) {
     // 如果目标数据表还不存在则创建
-    tableHooks = `CREATE TABLE IF NOT EXISTS hooks (
-        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        repos_name TEXT NOT NULL UNIQUE,
+    tableRepos = `CREATE TABLE IF NOT EXISTS repos (
+        repos_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        repos_name TEXT NOT NULL,
         repos_remote TEXT NOT NULL,
+    )`
+    _, err := db.Exec(tableRepos)
+    
+    tableHooks = `CREATE TABLE IF NOT EXISTS hooks (
+        hook_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
         which_branch TEXT NOT NULL DEFAULT "master",
-        target_dir TEXT NOT NULL
+        repos_id INTEGER NOT NULL,
+        target_dir TEXT NOT NULL,
+        FOREIGN KEY(repos_id) REFERENCES repos(repos_id)
     );`
-    _, err := db.Exec(tableHooks)
+    _, err = db.Exec(tableHooks)
+    
+    tableStatusLog = `CREATE TABLE IF NOT EXISTS status_log (
+        log_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        hook_id INTEGER NOT NULL,
+        status TEXT NOT NULL,
+        log_content TEXT NOT NULL,
+        updated_time TIMESTAMP,
+        FORIGEN KEY (hook_id) REFERENCES hooks(hook_id)
+    )`
+    _, err = db.Exec(tableStatusLog)
 
     // 尝试读取数据
-    hooksDataSQL = "SELECT repos_name, repos_remote, which_branch, target_dir FROM hooks"
+    hooksDataSQL = "SELECT id, repos_name, repos_remote, which_branch, target_dir FROM hooks"
     rows, err := db.Query(hooksDataSQL)
     if err != nil {
         return nil, err
@@ -78,62 +103,53 @@ func genResponseStr(status string, message string) []byte {
 func HookHandler(w http.ResponseWriter, req *http.Request, params martini.Params) {
 
     w.Header().Set("Content-Type", "application/json")
-
-    // POST请求的处理
-    /*
-    var prb PushRequestBody
-    eventDecoder := json.NewDecoder(req.Body)
-    err := eventDecoder.Decode(&prb)
-    if err != nil {
-        log.Fatalln("请求内容非JSON格式：", err)
-        w.Write(genResponseStr("Failed", "请求内容非JSON格式！"))
-        return
-    }
-    // 记录日志
-    reqBodyStr, _ := json.MarshalIndent(prb, "", "    ")
-    // log.Println(string(reqBodyStr))
-
-    reposRemoteURL := prb.Repository.Url
-    branchParts := strings.Split(prb.Ref, "/")
-    branchPartsLength = len(branchParts)
-    if branchPartsLength == 0 {
-        log.Fatalln("请求内容中分支不正确！", prb.Ref)
-        w.Write(genResponseStr("Failed", "请求内容不合法！"))
-        return
-    }
-
-    branchName := branchParts[branchPartsLength-1]
-    thatBranch2Dir, ok := hooks[reposRemoteURL]
-    if ok == false {
-        log.Fatalln("未配置对应的Hook！", reposRemoteURL)
-        w.Write(genResponseStr("Failed", "未配置对应的Hook！"))
-        return
-    }
-
-    */
     
-    targetPlugin := plugins.Dispatch(req)
-    reposRemoteURL, branchName, err := targetPlugin.parse()
-    if err != nil {
-    
+    reposID := params["repos_id"]
+	// 如果用户指定了代码库的远程地址，则使用指定的
+	targetRepos, ok := repos[reposID]
+	if ok == false {
+		log.Fatalln("不存在指定的代码库", reposID)
+		w.Write(genResponseStr("Failed", "不存在指定的代码库！"))
+		return
+	}
+	reposRemoteURL := targetRepos.repos_remote
+	
+	pluginID := params["plugin_id"]
+	// 根据请求中指定的插件ID，加载对应的插件
+    targetPlugin := plugins.Dispatch(pluginID, req)
+    if targetPlugin == nil {
+        log.Fatalln("不存在指定的插件", pluginID)
+		w.Write(genResponseStr("Failed", "请求的URL错误！"))
+		return
     }
+    remoteURL, branchName, err := targetPlugin.parse()
+    if err != nil {
+    	log.Fatalln("请求内容解析出错！")
+		w.Write(genResponseStr("Failed", "请求体不合法!"))
+		return
+    }
+	if reposRemoteURL == nil || reposRemoteURL == "" {
+		reposRemoteURL = remoteURL
+	}
+	
+    thatBranch2Dir, _ := reposBranch2Dir[reposID]
     targetDir, ok := thatBranch2Dir[branchName]
     if ok == false {
-        log.Fatalln("未针对该分支配置对应的Hook！", branchName)
+        log.Fatalln("未针对该分支配置对应的Hook！", reposRemoteURL, branchName)
         w.Write(genResponseStr("Failed", "未针对该分支配置对应的Hook！"))
         return
     }
 
     isNew := false
-    absTargetDir, _ := filepath.Abs(targetDir)
-    if _, e := os.Stat(absTargetDir); os.IsNotExist(e) {
+    absTargetPath, _ := filepath.Abs(targetDir)
+    if _, e := os.Stat(absTargetPath); os.IsNotExist(e) {
         os.Mkdir(absTargetDir, 0666)
         isNew = true
     }
     // 获取当前目录，用于切换回来
     pwd, _ := os.Getwd()
-    // 切换当前目录到master分支的代码目录
-    err = os.Chdir(masterAbsPath)
+    // 切换当前目录到对应分支的代码目录
+    err = os.Chdir(absTargetPath)
     if err != nil {
         w.Write(genResponseStr("Error", "系统错误！"))
         return
@@ -211,7 +227,7 @@ func main() {
     m := martini.Classic()
 
     m.Get("/", viewHome)
-    m.Post("/webhook/(?P<type>[a-zA-Z]+)/(?P<id>\d+)", hookEventHandler)
+    m.Post("/webhook/(?P<plugin_id>[a-zA-Z]+)/(?P<repos_id>\d+)", hookEventHandler)
     m.Post("/new/repos", newRepos)
     m.Post("/new/hook", newHook)
 
