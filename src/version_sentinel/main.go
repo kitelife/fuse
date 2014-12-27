@@ -2,14 +2,12 @@ package main
 
 import (
     "database/sql"
-    "encoding/json"
     "fmt"
     "log"
     "net/http"
     "os"
     "os/exec"
     "path/filepath"
-    "strings"
 
     "github.com/go-martini/martini"
     _ "github.com/mattn/go-sqlite3"
