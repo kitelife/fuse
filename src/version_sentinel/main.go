@@ -75,7 +75,7 @@ func genResponseStr(status string, message string) []byte {
     return responseContent
 }
 
-func HookHandler(w http.ResponseWriter, req *http.Request) {
+func HookHandler(w http.ResponseWriter, req *http.Request, params martini.Params) {
 
     w.Header().Set("Content-Type", "application/json")
 
@@ -211,7 +211,7 @@ func main() {
     m := martini.Classic()
 
     m.Get("/", viewHome)
-    m.Post("/webhook", hookEventHandler)
+    m.Post("/webhook/(?P<type>[a-zA-Z]+)/(?P<id>\d+)", hookEventHandler)
     m.Post("/new/repos", newRepos)
     m.Post("/new/hook", newHook)
 

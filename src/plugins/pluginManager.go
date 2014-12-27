@@ -20,7 +20,7 @@ func PluginRegister(thisPlugin Plugin) bool {
 }
 
 func Dispatch(req *http.Request)(targetPlugin Plugin) {
-    for _, p := Plugins {
+    for _, p := range Plugins {
         if p.IsMe(req) == true {
             targetPlugin = p
             break
