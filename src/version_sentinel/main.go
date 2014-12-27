@@ -134,13 +134,13 @@ func HookHandler(w http.ResponseWriter, req *http.Request, params martini.Params
     
     pluginID := params["plugin_id"]
     // 根据请求中指定的插件ID，加载对应的插件
-    targetPlugin := plugins.Dispatch(pluginID, req)
+    targetPlugin := plugins.Dispatch(pluginID)
     if targetPlugin == nil {
         log.Fatalln("不存在指定的插件", pluginID)
         w.Write(genResponseStr("Failed", "请求的URL错误！"))
         return
     }
-    remoteURL, branchName, err := targetPlugin.parse()
+    remoteURL, branchName, err := targetPlugin.parse(req)
     if err != nil {
         log.Fatalln("请求内容解析出错！")
         w.Write(genResponseStr("Failed", "请求体不合法!"))

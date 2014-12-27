@@ -1,7 +1,11 @@
 package plugins
 
+import (
+    "net/http"
+)
+
 type Plugin interface {
-    Parse() (string, string)
+    Parse(*http.Request) (string, string)
 }
 
 var Plugins map[string]Plugin
@@ -18,7 +22,7 @@ func PluginRegister(thisPlugin Plugin) bool {
     return true
 }
 
-func Dispatch(pluginID string, req *http.Request) (targetPlugin Plugin) {
+func Dispatch(pluginID string) (targetPlugin Plugin) {
     targetPlugin, ok := Plugins[pluginID]
     if ok == false {
         fmt.Println("不存在该插件！")
