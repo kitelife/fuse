@@ -123,33 +123,33 @@ func HookHandler(w http.ResponseWriter, req *http.Request, params martini.Params
     repos, reposBranch2Dir := queryDBForHookHandler()
     
     reposID := params["repos_id"]
-	// 如果用户指定了代码库的远程地址，则使用指定的
-	targetRepos, ok := repos[reposID]
-	if ok == false {
-		log.Fatalln("不存在指定的代码库", reposID)
-		w.Write(genResponseStr("Failed", "不存在指定的代码库！"))
-		return
-	}
-	reposRemoteURL := targetRepos.repos_remote
-	
-	pluginID := params["plugin_id"]
-	// 根据请求中指定的插件ID，加载对应的插件
+    // 如果用户指定了代码库的远程地址，则使用指定的
+    targetRepos, ok := repos[reposID]
+    if ok == false {
+        log.Fatalln("不存在指定的代码库", reposID)
+        w.Write(genResponseStr("Failed", "不存在指定的代码库！"))
+        return
+    }
+    reposRemoteURL := targetRepos.repos_remote
+    
+    pluginID := params["plugin_id"]
+    // 根据请求中指定的插件ID，加载对应的插件
     targetPlugin := plugins.Dispatch(pluginID, req)
     if targetPlugin == nil {
         log.Fatalln("不存在指定的插件", pluginID)
-		w.Write(genResponseStr("Failed", "请求的URL错误！"))
-		return
+        w.Write(genResponseStr("Failed", "请求的URL错误！"))
+        return
     }
     remoteURL, branchName, err := targetPlugin.parse()
     if err != nil {
-    	log.Fatalln("请求内容解析出错！")
-		w.Write(genResponseStr("Failed", "请求体不合法!"))
-		return
+        log.Fatalln("请求内容解析出错！")
+        w.Write(genResponseStr("Failed", "请求体不合法!"))
+        return
     }
-	if reposRemoteURL == nil || reposRemoteURL == "" {
-		reposRemoteURL = remoteURL
-	}
-	
+    if reposRemoteURL == nil || reposRemoteURL == "" {
+        reposRemoteURL = remoteURL
+    }
+    
     thatBranch2Dir, _ := reposBranch2Dir[reposID]
     targetDir, ok := thatBranch2Dir[branchName]
     if ok == false {
