@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta charset="utf-8">
-        <title>版本哨兵</title>
+        <title>导火索</title>
         <meta name="viewport" content="width=1000, initial-scale=1.0, maximum-scale=1.0">
         
         <link href="/assets/bootstrap/css/bootstrap.min.css" rel="stylesheet">
@@ -25,7 +25,7 @@
                 <div class="col-xs-12">
                 <nav class="navbar navbar-inverse navbar-embossed" role="navigation">
                     <div class="navbar-header">
-                        <a class="navbar-brand" href="#">版本哨兵</a>
+                        <a class="navbar-brand" href="#">导火索</a>
                     </div>
                     <div class="collapse navbar-collapse">
                         <ul class="nav navbar-nav navbar-right">
@@ -39,30 +39,37 @@
                 </div>
             </div>
             <div class="row content-row">
+                {{ rang .DBRelatedData }}
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <h3 class="panel-title">Panel title</h3>
+                        <h3 class="panel-title"><span title="repos_id={{ .ReposID }},repos_name={{ .ReposName }},repos_remote={{ .ReposRemote }},repos_type={{ .ReposType }}">{{ .ReposName }} : {{ .ReposType }} : {{ .ReposRemote }}</span></h3>
                     </div>
                     <div class="panel-body">
-                        Panel content
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th class="seq-num">#</th>
+                                    <th class="branch-name">分支</th>
+                                    <th class="target-dir">代码目录</th>
+                                    <th class="hook-status">状态</th>
+                                    <th class="updated-time">最新时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{ range $index, $hook := .Hooks }}
+                                <tr>
+                                    <td class="seq-num">{{ $index }}</td>
+                                    <td class="branch-name">{{ $hook.WhichBranch }}</td>
+                                    <td class="target-dir">{{ $hook.TargetDir }}</td>
+                                    <td class="hook-status"> {{ $hook.HookStatus }}</td>
+                                    <td class="updated-time">{{ $hook.UpdatedTime }}</td>
+                                </tr>
+                                {{ end }}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <h3 class="panel-title">Panel title</h3>
-                    </div>
-                    <div class="panel-body">
-                        Panel content
-                    </div>
-                </div>
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <h3 class="panel-title">Panel title</h3>
-                    </div>
-                    <div class="panel-body">
-                        Panel content
-                    </div>
-                </div>
+                {{ end }}
             </div>
         </div>
         
@@ -80,11 +87,9 @@
                         <div class="form-group">
                             <select class="form-control select select-primary" data-toggle="select">
                                 <option value="">选择类型</option>
-                                <option value="1">Spider Man</option>
-                                <option value="2">Wolverine</option>
-                                <option value="3">Captain America</option>
-                                <option value="4">X-Men</option>
-                                <option value="5">Crocodile</option>
+                                {{ range _, $pluginID := .PluginIDList}}
+                                <option value="{{ $pluginID }}">{{ $pluginID }}</option>
+                                {{ end }}
                             </select>
                         </div>
                         <div class="form-group">
@@ -116,11 +121,9 @@
                         <div class="form-group">
                             <select class="form-control select select-primary" data-toggle="select">
                                 <option value="">选择仓库</option>
-                                <option value="1">Spider Man</option>
-                                <option value="2">Wolverine</option>
-                                <option value="3">Captain America</option>
-                                <option value="4">X-Men</option>
-                                <option value="5">Crocodile</option>
+                                {{ range $k, $v := .ReposList}}
+                                <option value="{{ $k }}">{{ $v }}</option>
+                                {{ end }}
                             </select>
                         </div>
                         <div class="form-group">

@@ -7,45 +7,45 @@ import (
     "strings"
 )
 
-type GitlabReposInfo struct {
+type GitlabReposInfoStruct struct {
     Name        string
     Url         string
     Description string
     Homepage    string
 }
 
-type GitlabCommitAuthorInfo struct {
+type GitlabCommitAuthorInfoStruct struct {
     Name  string
     Email string
 }
 
-type GitlabCommitInfo struct {
+type GitlabCommitInfoStruct struct {
     Id        string
     Message   string
     Timestamp string
     Url       string
-    Author    CommitAuthorInfo
+    Author    GitlabCommitAuthorInfoStruct
 }
 
-type GitlabPushRequestBody struct {
+type GitlabPushRequestBodyStruct struct {
     Before     string
     After      string
     Ref        string
     User_id    int
     User_name  string
     Project_id int
-    Repository ReposInfo
-    Commits    []CommitInfo
+    Repository GitlabReposInfoStruct
+    Commits    []GitlabCommitInfoStruct
 }
 
-type Gitlab struct {
+type GitlabStruct struct {
     id string
 }
 
-func (gl *Gitlab) Parse(req *http.Request) (reposRemoteURL string, branchName string) {
-    var prb GitlabPushRequestBody
+func (gls *GitlabStruct) Parse(req *http.Request) (reposRemoteURL string, branchName string) {
+    var prbs GitlabPushRequestBodyStruct
     eventDecoder := json.NewDecoder(req.Body)
-    err := eventDecoder.Decode(&prb)
+    err := eventDecoder.Decode(&prbs)
     if err != nil {
         return "", ""
     }
@@ -53,19 +53,19 @@ func (gl *Gitlab) Parse(req *http.Request) (reposRemoteURL string, branchName st
     // reqBodyStr, _ := json.MarshalIndent(prb, "", "    ")
     // log.Println(string(reqBodyStr))
 
-    branchParts := strings.Split(prb.Ref, "/")
+    branchParts := strings.Split(prbs.Ref, "/")
     branchPartsLength = len(branchParts)
     if branchPartsLength == 0 {
-        fmt.Println("请求内容中分支不正确！", prb.Ref)
+        fmt.Println("请求内容中分支不正确！", prbs.Ref)
         return "", ""
     }
 
     branchName := branchParts[branchPartsLength-1]
-    reposRemoteURL := prb.Repository.Url
+    reposRemoteURL := prbs.Repository.Url
     return reposRemoteURL, branchName
 }
 
 func init() {
-    gl := Gitlab{id: "gitlab"}
-    PluginRegister(gl)
+    gls := GitlabStruct{id: "gitlab"}
+    PluginRegister(gls)
 }

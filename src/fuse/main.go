@@ -3,6 +3,7 @@ package main
 import (
     "database/sql"
     "fmt"
+    "html/template"
     "log"
     "net/http"
     "os"
@@ -11,30 +12,45 @@ import (
 
     "github.com/go-martini/martini"
     _ "github.com/mattn/go-sqlite3"
+    
     "plugins"
 )
 
-type Response struct {
+type ResponseStruct struct {
     Status string
     Msg    string
 }
 
-type Repos struct {
+type ReposStruct struct {
     ReposID     int
     ReposName   string
     ReposRemote string
+    ReposType string
 }
 
-type Hook struct {
+type HookStruct struct {
     HookID      int
     ReposID     int
     WhichBranch string
     TargetDir   string
+    HookStatus string
+    LogContent string
+    UpdatedTime string
 }
 
-type Branch2Dir map[string]string
 
-// var hooks map[int]Hook = make(map[int]Hook)
+type DBRelatedDataStruct struct {
+    ReposStruct
+    Hooks []HookStruct
+}
+
+type HomePageDataStruct struct {
+    PluginIDList []string
+    ReposList map[int]string
+    DBRelatedData []DBRelatedDataStruct
+}
+
+type Branch2DirMap map[string]string
 
 var masterAbsPath string
 var db *sql.DB
@@ -43,8 +59,9 @@ func initDB() (err error) {
     // 如果目标数据表还不存在则创建
     tableRepos = `CREATE TABLE IF NOT EXISTS repos (
         repos_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        repos_name TEXT NOT NULL,
-        repos_remote TEXT NOT NULL,
+        repos_name TEXT NOT NULL
+        repos_remote TEXT NOT NULL DEFAULT "",
+        repos_type TEXT NOT NULL
     )`
     _, err := db.Exec(tableRepos)
 
@@ -57,31 +74,21 @@ func initDB() (err error) {
         repos_id INTEGER NOT NULL,
         which_branch TEXT NOT NULL DEFAULT "master",
         target_dir TEXT NOT NULL,
+        hook_status TEXT NOT NULL,
+        log_content TEXT NOT NULL,
+        updated_time TIMESTAMP,
         FOREIGN KEY(repos_id) REFERENCES repos(repos_id)
     );`
     _, err = db.Exec(tableHooks)
     if err != nil {
         return err
     }
-
-    tableStatusLog = `CREATE TABLE IF NOT EXISTS status_log (
-        log_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        hook_id INTEGER NOT NULL,
-        status TEXT NOT NULL,
-        log_content TEXT NOT NULL,
-        updated_time TIMESTAMP,
-        FORIGEN KEY (hook_id) REFERENCES hooks(hook_id)
-    )`
-    _, err = db.Exec(tableStatusLog)
-    if err != nil {
-        return err
-    }
     return nil
 }
 
-func queryDBForHookHandler() (map[int]Repos, map[int]Branch2Dir) {
+func queryDBForHookHandler() (map[int]ReposStruct, map[int]Branch2DirMap) {
     // 尝试读取数据
-    reposDataSQL = "SELECT repos_id, repos_name, repos_remote FROM repos"
+    reposDataSQL = "SELECT repos_id, repos_name, repos_remote repos_type FROM repos"
     reposRows, err := db.Query(reposDataSQL)
     if err != nil {
         return nil, nil
@@ -95,16 +102,17 @@ func queryDBForHookHandler() (map[int]Repos, map[int]Branch2Dir) {
     }
     defer hooksRows.Close()
 
-    reposAll := make(map[index]Repos)
-    reposBranch2Dir := make(map[int]Branch2Dir)
+    reposAll := make(map[index]ReposStruct)
+    reposBranch2Dir := make(map[int]Branch2DirMap)
 
     var reposID int
     
     var reposName string
     var reposRemote string
+    var reposType string
     for reposRows.Next() {
-        reposRows.Scan(&reposID, &reposName, &reposRemote)
-        reposAll[reposID] = Repos{ReposID: reposID, ReposName: reposName, ReposRemote: reposRemote}
+        reposRows.Scan(&reposID, &reposName, &reposRemote, &reposType)
+        reposAll[reposID] = ReposStruct{ReposID: reposID, ReposName: reposName, ReposRemote: reposRemote, ReposType: reposType}
     }
     var whichBranch string
     var targetDir string
@@ -120,12 +128,49 @@ func queryDBForHookHandler() (map[int]Repos, map[int]Branch2Dir) {
     return reposAll, reposBranch2Dir
 }
 
-func queryDataForViewHome() {
-
+func queryDataForViewHome()(reposList map[int]string, dbRelatedData []DBRelatedDataStruct) {
+    reposList := make(map[int]string)
+    
+    reposDataSQL := "SELECT repos_id, repos_name, repos_remote, repos_type FROM repos"
+    reposRows, err := db.Query(reposDataSQL)
+    if err != nil {
+        fmt.Println("数据库查询出错！", err.Error())
+        return
+    }
+    hooksDataSQL := "SELECT hook_id, repos_id, which_branch, target_dir, hook_status, log_content, updated_time FROM hooks"
+    hooksRows, err := db.Query(hooksDataSQL)
+    if err != nil {
+        fmt.Println("数据库查询出错！", err.Error())
+        return
+    }
+    
+    var reposID int
+    
+    var reposName string
+    var reposRemote string
+    var reposType string
+    for reposRows.Next() {
+        reposRows.Scan(&reposID, &reposName, &reposRemote, &reposType)
+        dbRelatedData = append(dbRelatedData, DBRelatedDataStruct{ReposStruct{reposID, reposName, reposRemote, reposType}})
+        reposList[reposID] = reposName
+    }
+    
+    var hookID int
+    var whichBranch string
+    var targetDir string
+    var hostStatus string
+    var logContent string
+    var updatedTime string
+    for hooksRows.Next() {
+        hooksRows.Scan(&hookID, &reposID, &whichBranch, &targetDir, &hookStatus, &logContent, &updatedTime)
+        dbRelatedData[reposID].Hooks = append(dbRelatedData[reposID].Hooks, HookStruct{hookID, reposID, whichBranch, targetDir, hookStatus, logContent, updatedTime})
+    }
+    
+    return reposList, dbRelatedData
 }
 
 func genResponseStr(status string, message string) []byte {
-    resp := Response{
+    resp := ResponseStruct{
         Status: status,
         Msg:    message,
     }
@@ -149,6 +194,12 @@ func HookHandler(w http.ResponseWriter, req *http.Request, params martini.Params
     reposRemoteURL := targetRepos.repos_remote
 
     pluginID := params["plugin_id"]
+    // 先检测请求URL中的仓库类型与目标仓库配置的类型是否一致
+    if targetRepos.ReposType != pluginID {
+        fmt.Println("仓库类型不匹配！")
+        w.Write(genResponseStr("Failed", "请求的URL错误！"))
+        return
+    }
     // 根据请求中指定的插件ID，加载对应的插件
     targetPlugin := plugins.Dispatch(pluginID)
     if targetPlugin == nil {
@@ -236,19 +287,44 @@ func HookHandler(w http.ResponseWriter, req *http.Request, params martini.Params
     w.Write(genResponseStr("success", "自动更新成功！"))
 }
 
-func viewHome() string {
+func viewHome(w http.ResponseWriter, req *http.Request) {
+    pluginIDList := plugins.ListPluginID()
+    reposList, dbRelatedData := queryDataForViewHome()
+    
+    dataToRender := 
+    t, _ := template.ParseFiles('./public/templates/index.html')
+    _ := t.Execute(w, HomePageDataStruct{PluginIDList: pluginIDList, ReposList: reposList, DBRelatedData: dbRelatedData})
+    return
+}
+
+func newRepos() {
 
 }
 
-func newRepos() string {
+func newHook() {
 
 }
 
-func newHook() string {
+func modifyRepos() {
 
 }
+
+func modifyHook() {
+
+}
+
+func deleteRepos() {
+
+}
+
+func deleteHook() {
+
+}
+
+
 
 func main() {
+    
     db, err := sql.Open("sqlite3", "./data.db")
     if err != nil {
         fmt.Println("数据库打开失败！", err.Error())
@@ -268,6 +344,10 @@ func main() {
     m.Post("/webhook/(?P<plugin_id>[a-zA-Z]+)/(?P<repos_id>[0-9]+)", hookEventHandler)
     m.Post("/new/repos", newRepos)
     m.Post("/new/hook", newHook)
+    m.Post("/modify/repos", modifyRepos)
+    m.Post("/modify/hook", modifyHook)
+    m.Post("/delete/repos", deleteRepos)
+    m.Post("/delete/hook", deleteHook)
 
     m.Run()
 }

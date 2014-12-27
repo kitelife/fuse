@@ -4,13 +4,13 @@ import (
     "net/http"
 )
 
-type Plugin interface {
+type PluginInterface interface {
     Parse(*http.Request) (string, string)
 }
 
-var Plugins map[string]Plugin
+var Plugins map[string]PluginInterface
 
-func PluginRegister(thisPlugin Plugin) bool {
+func PluginRegister(thisPlugin PluginInterface) bool {
     _, ok := Plugins[id]
     if ok == true {
         return false
@@ -22,7 +22,7 @@ func PluginRegister(thisPlugin Plugin) bool {
     return true
 }
 
-func Dispatch(pluginID string) (targetPlugin Plugin) {
+func Dispatch(pluginID string) (targetPlugin PluginInterface) {
     targetPlugin, ok := Plugins[pluginID]
     if ok == false {
         fmt.Println("不存在该插件！")
@@ -31,6 +31,13 @@ func Dispatch(pluginID string) (targetPlugin Plugin) {
     return targetPlugin
 }
 
+func ListPluginID()(pluginIDList []string) {
+    for pluginID, _ := range Plugins {
+        pluginIDList = append(pluginIDList, pluginID)
+    }
+    return pluginIDList
+}
+
 func init() {
-    Plugins = make(map[string]Plugin)
+    Plugins = make(map[string]PluginInterface)
 }
