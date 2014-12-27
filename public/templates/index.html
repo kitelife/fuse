@@ -39,7 +39,7 @@
                 </div>
             </div>
             <div class="row content-row">
-                {{ rang .DBRelatedData }}
+                {{ range .DBRelatedData }}
                 <div class="panel panel-default">
                     <div class="panel-heading">
                         <h3 class="panel-title"><span title="repos_id={{ .ReposID }},repos_name={{ .ReposName }},repos_remote={{ .ReposRemote }},repos_type={{ .ReposType }}">{{ .ReposName }} : {{ .ReposType }} : {{ .ReposRemote }}</span></h3>
@@ -87,7 +87,7 @@
                         <div class="form-group">
                             <select class="form-control select select-primary" data-toggle="select">
                                 <option value="">选择类型</option>
-                                {{ range _, $pluginID := .PluginIDList}}
+                                {{ range $index, $pluginID := .PluginIDList}}
                                 <option value="{{ $pluginID }}">{{ $pluginID }}</option>
                                 {{ end }}
                             </select>

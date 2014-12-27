@@ -5,6 +5,7 @@ import (
     "fmt"
     "net/http"
     "strings"
+    "plugin_manager"
 )
 
 type GitlabReposInfoStruct struct {
@@ -42,7 +43,7 @@ type GitlabStruct struct {
     id string
 }
 
-func (gls *GitlabStruct) Parse(req *http.Request) (reposRemoteURL string, branchName string) {
+func (gls GitlabStruct) Parse(req *http.Request) (reposRemoteURL string, branchName string) {
     var prbs GitlabPushRequestBodyStruct
     eventDecoder := json.NewDecoder(req.Body)
     err := eventDecoder.Decode(&prbs)
@@ -54,18 +55,18 @@ func (gls *GitlabStruct) Parse(req *http.Request) (reposRemoteURL string, branch
     // log.Println(string(reqBodyStr))
 
     branchParts := strings.Split(prbs.Ref, "/")
-    branchPartsLength = len(branchParts)
+    branchPartsLength := len(branchParts)
     if branchPartsLength == 0 {
         fmt.Println("请求内容中分支不正确！", prbs.Ref)
         return "", ""
     }
 
-    branchName := branchParts[branchPartsLength-1]
-    reposRemoteURL := prbs.Repository.Url
+    branchName = branchParts[branchPartsLength-1]
+    reposRemoteURL = prbs.Repository.Url
     return reposRemoteURL, branchName
 }
 
 func init() {
     gls := GitlabStruct{id: "gitlab"}
-    PluginRegister(gls)
+    plugin_manager.PluginRegister("gitlab", gls)
 }

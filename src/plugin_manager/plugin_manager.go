@@ -1,6 +1,7 @@
-package plugins
+package plugin_manager
 
 import (
+    "fmt"
     "net/http"
 )
 
@@ -8,17 +9,13 @@ type PluginInterface interface {
     Parse(*http.Request) (string, string)
 }
 
-var Plugins map[string]PluginInterface
+var Plugins map[string]PluginInterface = make(map[string]PluginInterface)
 
-func PluginRegister(thisPlugin PluginInterface) bool {
-    _, ok := Plugins[id]
-    if ok == true {
+func PluginRegister(id string, thisPlugin PluginInterface) bool {
+    if _, ok := Plugins[id]; ok == true {
         return false
     }
-    if thisPlugin.id == nil {
-        return false
-    }
-    Plugins[thisPlugin.id] = thisPlugin
+    Plugins[id] = thisPlugin
     return true
 }
 
@@ -39,5 +36,5 @@ func ListPluginID()(pluginIDList []string) {
 }
 
 func init() {
-    Plugins = make(map[string]PluginInterface)
+    
 }
