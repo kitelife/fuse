@@ -22,28 +22,26 @@ type Response struct {
 }
 
 type Repos struct {
-    repos_id int,
-    repos_name string
-    repos_remote string
+    ReposID int,
+    ReposName string
+    ReposRemote string
 }
 
 type Hook struct {
     HookID int
-    repos_id int
+    ReposID int
     WhichBranch string
     TargetDir   string
 }
 
 type Branch2Dir map[string]string
 
-var hooks map[int]Hook = make(map[int]Hook)
-var repos map[int]Repos = make(map[index]Repos)
-var reposBranch2Dir map[int]Branch2Dir = make(map[int]Branch2Dir)
+// var hooks map[int]Hook = make(map[int]Hook)
 
 var masterAbsPath string
 var db *sql.DB
 
-func initFromDB() (err error) {
+func initDB() (err error) {
     // 如果目标数据表还不存在则创建
     tableRepos = `CREATE TABLE IF NOT EXISTS repos (
         repos_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -52,14 +50,21 @@ func initFromDB() (err error) {
     )`
     _, err := db.Exec(tableRepos)
     
+    if err != nil {
+        return err
+    }
+    
     tableHooks = `CREATE TABLE IF NOT EXISTS hooks (
         hook_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        which_branch TEXT NOT NULL DEFAULT "master",
         repos_id INTEGER NOT NULL,
+        which_branch TEXT NOT NULL DEFAULT "master",
         target_dir TEXT NOT NULL,
         FOREIGN KEY(repos_id) REFERENCES repos(repos_id)
     );`
     _, err = db.Exec(tableHooks)
+    if err != nil {
+        return err
+    }
     
     tableStatusLog = `CREATE TABLE IF NOT EXISTS status_log (
         log_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -70,9 +75,17 @@ func initFromDB() (err error) {
         FORIGEN KEY (hook_id) REFERENCES hooks(hook_id)
     )`
     _, err = db.Exec(tableStatusLog)
+    if err != nil {
+        return err
+    }
+    return nil
+}
 
+func queryDBForHookHandler()(map[int]Repos, map[int]Branch2Dir) {
+    repos := make(map[index]Repos)
+    reposBranch2Dir := make(map[int]Branch2Dir)
     // 尝试读取数据
-    hooksDataSQL = "SELECT id, repos_name, repos_remote, which_branch, target_dir FROM hooks"
+    hooksDataSQL = "SELECT hook_id, repos_id, which_branch, target_dir FROM hooks"
     rows, err := db.Query(hooksDataSQL)
     if err != nil {
         return nil, err
@@ -88,7 +101,11 @@ func initFromDB() (err error) {
         hooks[&reposRemote] = map[string]string{&whichBranch: &targetDir}
         repos[&reposName] = &reposRemote
     }
-    return nil
+    return repos, reposBranch2Dir
+}
+
+func queryDataForViewHome() {
+    
 }
 
 func genResponseStr(status string, message string) []byte {
@@ -101,8 +118,9 @@ func genResponseStr(status string, message string) []byte {
 }
 
 func HookHandler(w http.ResponseWriter, req *http.Request, params martini.Params) {
-
     w.Header().Set("Content-Type", "application/json")
+    
+    repos, reposBranch2Dir := queryDBForHookHandler()
     
     reposID := params["repos_id"]
 	// 如果用户指定了代码库的远程地址，则使用指定的
@@ -218,7 +236,7 @@ func main() {
     }
     defer db.Close()
 
-    err := initFromDB()
+    err := initDB()
     if err != nil {
         fmt.Println("数据库操作失败！", err.Error())
         return
