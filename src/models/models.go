@@ -180,3 +180,19 @@ func (mh ModelHelper) CheckReposIDExist (reposID int) (bool, error) {
         return true, nil
     }
 }
+
+func (mh ModelHelper) DeleteRepos(reposID int) error {
+    targetSQL := `DELETE FROM repos WHERE repos_id=?`
+    if _, err := mh.Db.Exec(targetSQL, reposID); err != nil {
+        return err
+    }
+    return nil
+}
+
+func (mh ModelHelper) DeleteHook(hookID int) error {
+    targetSQL := `DELETE FROM hook WHERE hook_id=?`
+    if _, err := mh.Db.Exec(targetSQL, hookID); err != nil {
+        return err
+    }
+    return nil
+}

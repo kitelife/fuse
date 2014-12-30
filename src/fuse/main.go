@@ -226,13 +226,13 @@ func newRepos(w http.ResponseWriter, req *http.Request, params martini.Params) {
 }
 
 func newHook(w http.ResponseWriter, params martini.Params) {
-    reposID := strconv.Atoi(params("repos_id"))
+    reposID := strconv.Atoi(params["repos_id"])
     if exist, _ := mh.CheckReposIDExist(reposID); exist == false {
         w.Write(genResponseStr("Failed", "不存在指定的代码库！"))
         return
     }
-    whichBranch := params("which_branch")
-    targetDir := params("target_dir")
+    whichBranch := params["which_branch"]
+    targetDir := params["target_dir"]
     
     updatedTime := time.Now().String()
     if err := mh.StoreNewHook(reposID, whichBranch, targetDir, updatedTime); err != nil {
@@ -251,15 +251,25 @@ func modifyHook() {
 
 }
 
-func deleteRepos() {
-
+func deleteRepos(w http.ResponseWriter, params martini.Params) {
+    reposID := strconv.Atoi(params["repos_id"])
+    if err := mh.DeleteRepos(reposID); err != nil {
+        w.Write(genResponseStr("Failed", "删除代码库记录失败！"))
+        return
+    }
+    w.Write(genResponseStr("success", "成功删除代码库记录"))
+    return
 }
 
 func deleteHook() {
-
+    hookID := strconv.Atoi(params["hook_id"])
+    if err := mh.DeleteHook(hookID); err != nil {
+        w.Write(genResponseStr("Failed", "删除钩子失败！"))
+        return
+    }
+    w.Write(genResponseStr("success", "成功删除钩子"))
+    return
 }
-
-
 
 func main() {
     var err error
