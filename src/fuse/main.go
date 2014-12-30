@@ -16,6 +16,7 @@ import (
     
     "plugin_manager"
     _ "plugins"
+    "models"
 )
 
 type ResponseStruct struct {
@@ -56,127 +57,7 @@ type Branch2DirMap map[string]string
 
 var masterAbsPath string
 var db *sql.DB
-
-func initDB() (err error) {
-    // 如果目标数据表还不存在则创建
-    tableRepos := `CREATE TABLE IF NOT EXISTS repos (
-        repos_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        repos_name TEXT NOT NULL,
-        repos_remote TEXT NOT NULL DEFAULT "",
-        repos_type TEXT NOT NULL
-    )`
-    _, err = db.Exec(tableRepos)
-
-    if err != nil {
-        return err
-    }
-
-    tableHooks := `CREATE TABLE IF NOT EXISTS hooks (
-        hook_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        repos_id INTEGER NOT NULL,
-        which_branch TEXT NOT NULL DEFAULT "master",
-        target_dir TEXT NOT NULL,
-        hook_status TEXT NOT NULL,
-        log_content TEXT NOT NULL,
-        updated_time TIMESTAMP,
-        FOREIGN KEY(repos_id) REFERENCES repos(repos_id)
-    );`
-    _, err = db.Exec(tableHooks)
-    if err != nil {
-        return err
-    }
-    return nil
-}
-
-func queryDBForHookHandler() (map[int]ReposStruct, map[int]Branch2DirMap) {
-    // 尝试读取数据
-    reposDataSQL := "SELECT repos_id, repos_name, repos_remote repos_type FROM repos"
-    reposRows, err := db.Query(reposDataSQL)
-    if err != nil {
-        return nil, nil
-    }
-    defer reposRows.Close()
-
-    hooksDataSQL := "SELECT repos_id, which_branch, target_dir FROM hooks"
-    hooksRows, err := db.Query(hooksDataSQL)
-    if err != nil {
-        return nil, nil
-    }
-    defer hooksRows.Close()
-
-    reposAll := make(map[int]ReposStruct)
-    reposBranch2Dir := make(map[int]Branch2DirMap)
-
-    var reposID int
-    
-    var reposName string
-    var reposRemote string
-    var reposType string
-    for reposRows.Next() {
-        reposRows.Scan(&reposID, &reposName, &reposRemote, &reposType)
-        reposAll[reposID] = ReposStruct{ReposID: reposID, ReposName: reposName, ReposRemote: reposRemote, ReposType: reposType}
-    }
-    var whichBranch string
-    var targetDir string
-    for hooksRows.Next() {
-        hooksRows.Scan(&reposID, &whichBranch, &targetDir)
-        _, ok := reposBranch2Dir[reposID]
-        if ok == false {
-            reposBranch2Dir[reposID] = map[string]string{whichBranch: targetDir}
-        } else {
-            reposBranch2Dir[reposID][whichBranch] = targetDir
-        }
-    }
-    return reposAll, reposBranch2Dir
-}
-
-func queryDataForViewHome()(reposList map[int]string, dbRelatedData []DBRelatedDataStruct) {
-    reposList = make(map[int]string)
-    
-    reposDataSQL := "SELECT repos_id, repos_name, repos_remote, repos_type FROM repos"
-    reposRows, err := db.Query(reposDataSQL)
-    if err != nil {
-        fmt.Println("数据库查询出错！", err.Error())
-        return
-    }
-    hooksDataSQL := "SELECT hook_id, repos_id, which_branch, target_dir, hook_status, log_content, updated_time FROM hooks"
-    hooksRows, err := db.Query(hooksDataSQL)
-    if err != nil {
-        fmt.Println("数据库查询出错！", err.Error())
-        return
-    }
-    
-    var reposID int
-    
-    var hookID int
-    var whichBranch string
-    var targetDir string
-    var hookStatus string
-    var logContent string
-    var updatedTime string
-    
-    var hooks map[int][]HookStruct = make(map[int][]HookStruct)
-    for hooksRows.Next() {
-        hooksRows.Scan(&hookID, &reposID, &whichBranch, &targetDir, &hookStatus, &logContent, &updatedTime)
-        if _, ok := hooks[reposID]; ok == false {
-            // 1024: 每个代码库最多能够1024个分支，也即1024个hook
-            hooks[reposID] = make([]HookStruct, 0, 1024)
-        }
-        //dbRelatedData[reposID].Hooks = append(dbRelatedData[reposID].Hooks, HookStruct{hookID, reposID, whichBranch, targetDir, hookStatus, logContent, updatedTime})
-        hooks[reposID] = append(hooks[reposID], HookStruct{hookID, reposID, whichBranch, targetDir, hookStatus, logContent, updatedTime})
-    }
-    
-    var reposName string
-    var reposRemote string
-    var reposType string
-    for reposRows.Next() {
-        reposRows.Scan(&reposID, &reposName, &reposRemote, &reposType)
-        dbRelatedData = append(dbRelatedData, DBRelatedDataStruct{ReposStruct{reposID, reposName, reposRemote, reposType}, hooks[reposID]})
-        reposList[reposID] = reposName
-    }
-    
-    return reposList, dbRelatedData
-}
+var mh models.ModelHelper
 
 func genResponseStr(status string, message string) []byte {
     resp := ResponseStruct{
@@ -190,7 +71,7 @@ func genResponseStr(status string, message string) []byte {
 func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.Params) {
     w.Header().Set("Content-Type", "application/json")
 
-    repos, reposBranch2Dir := queryDBForHookHandler()
+    repos, reposBranch2Dir := mh.QueryDBForHookHandler()
 
     reposID, err := strconv.Atoi(params["repos_id"])
     if err != nil {
@@ -298,7 +179,7 @@ func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.P
 
 func viewHome(w http.ResponseWriter, req *http.Request) {
     pluginIDList := plugin_manager.ListPluginID()
-    reposList, dbRelatedData := queryDataForViewHome()
+    reposList, dbRelatedData := mh.QueryDBForViewHome()
     
     t, err := template.ParseFiles("./public/templates/index.html")
     if err != nil {
@@ -314,7 +195,7 @@ func newRepos(w http.ResponseWriter, req *http.Request, params martini.Params) {
 
     reposName := params["repos_name"]
 
-    if exist, _ := CheckReposNameExists(db, reposName); exist == true {
+    if exist, _ := mh.CheckReposNameExists(db, reposName); exist == true {
         w.Write(genResponseStr("Failed", "该代码库已存在！"))
         return
     }
@@ -327,7 +208,7 @@ func newRepos(w http.ResponseWriter, req *http.Request, params martini.Params) {
 
     reposRemote := params["repos_remote"]
     
-    err := StoreNewRepos(reposType, reposName, reposRemote)
+    err := mh.StoreNewRepos(reposType, reposName, reposRemote)
     if err != nil {
         w.Write(genResponseStr("Failed", "新增代码库失败！"))
         return
@@ -367,7 +248,8 @@ func main() {
     }
     defer db.Close()
 
-    err = initDB()
+    mh = models.ModelHelper{db}
+    err = mh.initDB()
     if err != nil {
         fmt.Println("数据库操作失败！", err.Error())
         return
