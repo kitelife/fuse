@@ -10,6 +10,7 @@ import (
     "os/exec"
     "path/filepath"
     "strconv"
+    "time"
 
     "github.com/go-martini/martini"
     _ "github.com/mattn/go-sqlite3"
@@ -68,6 +69,13 @@ func genResponseStr(status string, message string) []byte {
     return responseContent
 }
 
+func checkPathExist(path string) bool {
+    if _, e := os.Stat(absTargetPath); os.IsNotExist(e) {
+        return false
+    }
+    return true
+}
+
 func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.Params) {
     w.Header().Set("Content-Type", "application/json")
 
@@ -121,7 +129,7 @@ func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.P
 
     isNew := false
     absTargetPath, _ := filepath.Abs(targetDir)
-    if _, e := os.Stat(absTargetPath); os.IsNotExist(e) {
+    if checkPathExist == false {
         os.Mkdir(absTargetPath, 0666)
         isNew = true
     }
@@ -217,8 +225,22 @@ func newRepos(w http.ResponseWriter, req *http.Request, params martini.Params) {
     return
 }
 
-func newHook() {
+func newHook(w http.ResponseWriter, params martini.Params) {
+    reposID := strconv.Atoi(params("repos_id"))
+    if exist, _ := mh.CheckReposIDExist(reposID); exist == false {
+        w.Write(genResponseStr("Failed", "不存在指定的代码库！"))
+        return
+    }
+    whichBranch := params("which_branch")
+    targetDir := params("target_dir")
     
+    updatedTime := time.Now().String()
+    if err := mh.StoreNewHook(reposID, whichBranch, targetDir, updatedTime); err != nil {
+        w.Write(genResponseStr("Failed", "新增钩子失败！"))
+        return
+    }
+    w.Write(genResponseStr("success", "成功添加新钩子！"))
+    return
 }
 
 func modifyRepos() {
@@ -248,7 +270,7 @@ func main() {
     }
     defer db.Close()
 
-    mh = models.ModelHelper{db}
+    mh = models.ModelHelper{Db: db}
     err = mh.initDB()
     if err != nil {
         fmt.Println("数据库操作失败！", err.Error())

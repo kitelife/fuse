@@ -5,7 +5,7 @@ import (
 )
 
 type ModelHelper struct {
-    db *sql.DB
+    Db *sql.DB
 }
 
 func (mh ModelHelper) initDB() (err error) {
@@ -16,7 +16,7 @@ func (mh ModelHelper) initDB() (err error) {
         repos_remote TEXT NOT NULL DEFAULT "",
         repos_type TEXT NOT NULL
     )`
-    _, err = mh.db.Exec(tableRepos)
+    _, err = mh.Db.Exec(tableRepos)
 
     if err != nil {
         return err
@@ -32,7 +32,7 @@ func (mh ModelHelper) initDB() (err error) {
         updated_time TIMESTAMP,
         FOREIGN KEY(repos_id) REFERENCES repos(repos_id)
     );`
-    _, err = mh.db.Exec(tableHooks)
+    _, err = mh.Db.Exec(tableHooks)
     if err != nil {
         return err
     }
@@ -41,7 +41,7 @@ func (mh ModelHelper) initDB() (err error) {
 
 func (mh ModelHelper) CheckReposNameExists(db *sql.DB, reposName string) (bool, error) {
     targetSQL := `SELECT COUNT(*) FROM repos WHERE repos_name="?"`
-    rows, err := mh.db.Query(targetSQL, reposName)
+    rows, err := mh.Db.Query(targetSQL, reposName)
     if err != nil {
         return false, err
     }
@@ -57,9 +57,18 @@ func (mh ModelHelper) CheckReposNameExists(db *sql.DB, reposName string) (bool, 
     }
 }
 
-func (mh ModelHelper) SaveNewRepos(reposType string, reposName string, reposRemote string) error {
+func (mh ModelHelper) StoreNewRepos(reposType string, reposName string, reposRemote string) error {
     targetSQL = `INSERT INTO repos (repos_name, repos_remote, repos_type) VALUES ("?", "?", "?")`
-    if _, err := mh.db.Exec(targetSQL, reposName, reposRemote, reposType); err != nil {
+    if _, err := mh.Db.Exec(targetSQL, reposName, reposRemote, reposType); err != nil {
+        return err
+    }
+    return nil
+}
+
+// mh.StoreNewHook(reposID, whichBranch, targetDir, updatedTime)
+func (mh ModelHelper) StoreNewHook(reposID int, whichBranch string, targetDir string, updatedTime string) error {
+    targetSQL := `INSERT INTO hook (repos_id, which_branch, target_dir, updated_time) VALUES (?, "?", "?", "?")`
+    if _, err := mh.Db.Exec(targetSQL, reposID, whichBranch, targetDir, updatedTime); err != nil {
         return err
     }
     return nil
@@ -68,14 +77,14 @@ func (mh ModelHelper) SaveNewRepos(reposType string, reposName string, reposRemo
 func (mh ModelHelper) QueryDBForHookHandler() (map[int]ReposStruct, map[int]Branch2DirMap) {
     // 尝试读取数据
     reposDataSQL := "SELECT repos_id, repos_name, repos_remote repos_type FROM repos"
-    reposRows, err := mh.db.Query(reposDataSQL)
+    reposRows, err := mh.Db.Query(reposDataSQL)
     if err != nil {
         return nil, nil
     }
     defer reposRows.Close()
 
     hooksDataSQL := "SELECT repos_id, which_branch, target_dir FROM hooks"
-    hooksRows, err := mh.db.Query(hooksDataSQL)
+    hooksRows, err := mh.Db.Query(hooksDataSQL)
     if err != nil {
         return nil, nil
     }
@@ -111,13 +120,13 @@ func (mh ModelHelper) QueryDBForViewHome()(reposList map[int]string, dbRelatedDa
     reposList = make(map[int]string)
     
     reposDataSQL := "SELECT repos_id, repos_name, repos_remote, repos_type FROM repos"
-    reposRows, err := mh.db.Query(reposDataSQL)
+    reposRows, err := mh.Db.Query(reposDataSQL)
     if err != nil {
         fmt.Println("数据库查询出错！", err.Error())
         return
     }
     hooksDataSQL := "SELECT hook_id, repos_id, which_branch, target_dir, hook_status, log_content, updated_time FROM hooks"
-    hooksRows, err := mh.db.Query(hooksDataSQL)
+    hooksRows, err := mh.Db.Query(hooksDataSQL)
     if err != nil {
         fmt.Println("数据库查询出错！", err.Error())
         return
@@ -153,4 +162,21 @@ func (mh ModelHelper) QueryDBForViewHome()(reposList map[int]string, dbRelatedDa
     }
     
     return reposList, dbRelatedData
+}
+
+func (mh ModelHelper) CheckReposIDExist (reposID int) (bool, error) {
+    targetSQL := `SELECT COUNT(*) FROM repos WHERE repos_id=?`
+    rows, err := mh.Db.Query(targetSQL, reposID)
+    if err != nil {
+        return false, err
+    }
+    defer rows.Close()
+    for rows.Next() {
+        var count int
+        rows.Scan(&count)
+        if count == 0 {
+            return false, nil
+        }
+        return true, nil
+    }
 }
