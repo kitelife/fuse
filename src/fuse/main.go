@@ -14,8 +14,8 @@ import (
     "github.com/go-martini/martini"
     _ "github.com/mattn/go-sqlite3"
     
-    _ "plugins"
     "plugin_manager"
+    _ "plugins"
 )
 
 type ResponseStruct struct {
@@ -309,12 +309,35 @@ func viewHome(w http.ResponseWriter, req *http.Request) {
     return
 }
 
-func newRepos() {
+func newRepos(w http.ResponseWriter, req *http.Request, params martini.Params) {
+    w.Header().Set("Content-Type", "application/json")
 
+    reposName := params["repos_name"]
+
+    if exist, _ := CheckReposNameExists(db, reposName); exist == true {
+        w.Write(genResponseStr("Failed", "该代码库已存在！"))
+        return
+    }
+
+    reposType := params["repos_type"]
+    if HasThisPlugin(reposType) == false {
+        w.Write(genResponseStr("Failed", "不存在对应的代码库类型！"))
+        return
+    }
+
+    reposRemote := params["repos_remote"]
+    
+    err := StoreNewRepos(reposType, reposName, reposRemote)
+    if err != nil {
+        w.Write(genResponseStr("Failed", "新增代码库失败！"))
+        return
+    }
+    w.Write(genResponseStr("success", "成功添加新代码库记录！"))
+    return
 }
 
 func newHook() {
-
+    
 }
 
 func modifyRepos() {

@@ -20,8 +20,7 @@ func PluginRegister(id string, thisPlugin PluginInterface) bool {
 }
 
 func Dispatch(pluginID string) (targetPlugin PluginInterface) {
-    targetPlugin, ok := Plugins[pluginID]
-    if ok == false {
+    if targetPlugin, ok := Plugins[pluginID]; ok == false {
         fmt.Println("不存在该插件！")
         return nil
     }
@@ -33,6 +32,13 @@ func ListPluginID()(pluginIDList []string) {
         pluginIDList = append(pluginIDList, pluginID)
     }
     return pluginIDList
+}
+
+func HasThisPlugin(pluginID string) bool {
+    if _, ok := Plugins[pluginID]; ok == true {
+        return true
+    }
+    return false
 }
 
 func init() {
