@@ -1,4 +1,4 @@
-package models 
+package models
 
 import (
     "database/sql"
@@ -94,7 +94,7 @@ func (mh ModelHelper) QueryDBForHookHandler() (map[int]ReposStruct, map[int]Bran
     reposBranch2Dir := make(map[int]Branch2DirMap)
 
     var reposID int
-    
+
     var reposName string
     var reposRemote string
     var reposType string
@@ -118,7 +118,7 @@ func (mh ModelHelper) QueryDBForHookHandler() (map[int]ReposStruct, map[int]Bran
 
 func (mh ModelHelper) QueryDBForViewHome()(reposList map[int]string, dbRelatedData []DBRelatedDataStruct) {
     reposList = make(map[int]string)
-    
+
     reposDataSQL := "SELECT repos_id, repos_name, repos_remote, repos_type FROM repos"
     reposRows, err := mh.Db.Query(reposDataSQL)
     if err != nil {
@@ -131,16 +131,16 @@ func (mh ModelHelper) QueryDBForViewHome()(reposList map[int]string, dbRelatedDa
         fmt.Println("数据库查询出错！", err.Error())
         return
     }
-    
+
     var reposID int
-    
+
     var hookID int
     var whichBranch string
     var targetDir string
     var hookStatus string
     var logContent string
     var updatedTime string
-    
+
     var hooks map[int][]HookStruct = make(map[int][]HookStruct)
     for hooksRows.Next() {
         hooksRows.Scan(&hookID, &reposID, &whichBranch, &targetDir, &hookStatus, &logContent, &updatedTime)
@@ -151,7 +151,7 @@ func (mh ModelHelper) QueryDBForViewHome()(reposList map[int]string, dbRelatedDa
         //dbRelatedData[reposID].Hooks = append(dbRelatedData[reposID].Hooks, HookStruct{hookID, reposID, whichBranch, targetDir, hookStatus, logContent, updatedTime})
         hooks[reposID] = append(hooks[reposID], HookStruct{hookID, reposID, whichBranch, targetDir, hookStatus, logContent, updatedTime})
     }
-    
+
     var reposName string
     var reposRemote string
     var reposType string
@@ -160,7 +160,7 @@ func (mh ModelHelper) QueryDBForViewHome()(reposList map[int]string, dbRelatedDa
         dbRelatedData = append(dbRelatedData, DBRelatedDataStruct{ReposStruct{reposID, reposName, reposRemote, reposType}, hooks[reposID]})
         reposList[reposID] = reposName
     }
-    
+
     return reposList, dbRelatedData
 }
 
@@ -195,4 +195,37 @@ func (mh ModelHelper) DeleteHook(hookID int) error {
         return err
     }
     return nil
+}
+
+func (mh ModelHelper) CheckReposHasHook (reposID int) (bool, error) {
+    targetSQL := "SELECT COUNT(*) FROM hooks WHERE repos_id=?"
+    rows, err := mh.Db.Query(targetSQL, reposID)
+    if err != nil {
+        return true, err
+    }
+    defer rows.Close()
+
+    for rows.Next() {
+        var count int
+        rows.Scan(&count)
+        if count == 0 {
+            return false, nil
+        }
+        return true, nil
+    }
+}
+
+func (mh ModelHelper) GetHookTargetDir (hookID int) (string, error) {
+    targetSQL := "SELECT target_dir FROM hooks WHERE hook_id=?"
+    rows, err := mh.Db.Query(targetSQL, hookID)
+    if err != nil {
+        return "", err
+    }
+    defer rows.Close()
+    var targetDir string
+    for rows.Next() {
+        rows.Scan(&targetDir)
+        break
+    }
+    return targetDir, nil
 }

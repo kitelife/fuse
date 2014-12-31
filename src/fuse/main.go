@@ -14,7 +14,7 @@ import (
 
     "github.com/go-martini/martini"
     _ "github.com/mattn/go-sqlite3"
-    
+
     "plugin_manager"
     _ "plugins"
     "models"
@@ -128,15 +128,16 @@ func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.P
     }
 
     isNew := false
-    absTargetPath, _ := filepath.Abs(targetDir)
-    if checkPathExist == false {
-        os.Mkdir(absTargetPath, 0666)
+    // 存入数据库时就已经是绝对路径了
+    // absTargetPath, _ := filepath.Abs(targetDir)
+    if checkPathExist(targetDir) == false {
+        os.Mkdir(targetDir, 0666)
         isNew = true
     }
     // 获取当前目录，用于切换回来
     pwd, _ := os.Getwd()
     // 切换当前目录到对应分支的代码目录
-    err = os.Chdir(absTargetPath)
+    err = os.Chdir(targetDir)
     if err != nil {
         w.Write(genResponseStr("Error", "系统错误！"))
         return
@@ -188,7 +189,7 @@ func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.P
 func viewHome(w http.ResponseWriter, req *http.Request) {
     pluginIDList := plugin_manager.ListPluginID()
     reposList, dbRelatedData := mh.QueryDBForViewHome()
-    
+
     t, err := template.ParseFiles("./public/templates/index.html")
     if err != nil {
         fmt.Println(err)
@@ -215,7 +216,7 @@ func newRepos(w http.ResponseWriter, req *http.Request, params martini.Params) {
     }
 
     reposRemote := params["repos_remote"]
-    
+
     err := mh.StoreNewRepos(reposType, reposName, reposRemote)
     if err != nil {
         w.Write(genResponseStr("Failed", "新增代码库失败！"))
@@ -233,7 +234,9 @@ func newHook(w http.ResponseWriter, params martini.Params) {
     }
     whichBranch := params["which_branch"]
     targetDir := params["target_dir"]
-    
+    // 存入数据库的是绝对路径
+    targetDir, _ := filepath.Abs(targetDir)
+
     updatedTime := time.Now().String()
     if err := mh.StoreNewHook(reposID, whichBranch, targetDir, updatedTime); err != nil {
         w.Write(genResponseStr("Failed", "新增钩子失败！"))
@@ -253,6 +256,11 @@ func modifyHook() {
 
 func deleteRepos(w http.ResponseWriter, params martini.Params) {
     reposID := strconv.Atoi(params["repos_id"])
+    // 先检测是否还有hook关联到该代码库
+    if exist, _ := mh.CheckReposHasHook(reposID); exist == true {
+        w.Write(genResponseStr("Failed", "该代码库还关联有钩子！"))
+        return
+    }
     if err := mh.DeleteRepos(reposID); err != nil {
         w.Write(genResponseStr("Failed", "删除代码库记录失败！"))
         return
@@ -263,6 +271,17 @@ func deleteRepos(w http.ResponseWriter, params martini.Params) {
 
 func deleteHook() {
     hookID := strconv.Atoi(params["hook_id"])
+    // 是否彻底删除（包括代码目录）？
+    eraseAll := params['erase_all']
+    targetDir, err := mh.GetHookTargetDir(hookID)
+    if err != nil {
+        w.Write(genResponseStr("Failed", err.Error()))
+        return
+    }
+    err = os.RemoveAll(targetDir)
+    if err != nil {
+        fmt.Println("删除代码目录出错，", err.Error())
+    }
     if err := mh.DeleteHook(hookID); err != nil {
         w.Write(genResponseStr("Failed", "删除钩子失败！"))
         return
@@ -296,7 +315,7 @@ func main() {
     m.Post("/modify/hook", modifyHook)
     m.Post("/delete/repos", deleteRepos)
     m.Post("/delete/hook", deleteHook)
-    
+
     m.Post("/webhook/(?P<plugin_id>[a-zA-Z]+)/(?P<repos_id>[0-9]+)", hookEventHandler)
 
     m.Run()
