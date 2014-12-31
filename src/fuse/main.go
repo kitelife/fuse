@@ -246,14 +246,6 @@ func newHook(w http.ResponseWriter, params martini.Params) {
     return
 }
 
-func modifyRepos() {
-
-}
-
-func modifyHook() {
-
-}
-
 func deleteRepos(w http.ResponseWriter, params martini.Params) {
     reposID := strconv.Atoi(params["repos_id"])
     // 先检测是否还有hook关联到该代码库
@@ -311,8 +303,6 @@ func main() {
     m.Get("/", viewHome)
     m.Post("/new/repos", newRepos)
     m.Post("/new/hook", newHook)
-    m.Post("/modify/repos", modifyRepos)
-    m.Post("/modify/hook", modifyHook)
     m.Post("/delete/repos", deleteRepos)
     m.Post("/delete/hook", deleteHook)
 
