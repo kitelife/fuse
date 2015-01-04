@@ -36,14 +36,14 @@ func genResponseStr(status string, message string) []byte {
 }
 
 func checkPathExist(path string) bool {
-    if _, e := os.Stat(absTargetPath); os.IsNotExist(e) {
+    if _, e := os.Stat(path); os.IsNotExist(e) {
         return false
     }
     return true
 }
 
 func logHookStatus(hookID int, hookStatus string, logContent string) {
-    if dbErr := mh.UpdateLogStatus(targetHookID, hookStatus, logContent); dbErr != nil {
+    if dbErr := mh.UpdateLogStatus(hookID, hookStatus, logContent); dbErr != nil {
         fmt.Println(dbErr.Error())
     }
 }
@@ -197,23 +197,25 @@ func viewHome(w http.ResponseWriter, req *http.Request) {
     return
 }
 
-func newRepos(w http.ResponseWriter, req *http.Request, params martini.Params) {
+func newRepos(w http.ResponseWriter, req *http.Request) {
     w.Header().Set("Content-Type", "application/json")
 
-    reposName := params["repos_name"]
+    reposName := req.FormValue("repos_name")
 
     if exist, _ := mh.CheckReposNameExists(db, reposName); exist == true {
         w.Write(genResponseStr("failure", "该代码库已存在！"))
         return
     }
-
-    reposType := params["repos_type"]
-    if HasThisPlugin(reposType) == false {
+    
+    reposType := req.FormValue("repos_type")
+    fmt.Println("repos_type: ", reposType)
+    
+    if plugin_manager.HasThisPlugin(reposType) == false {
         w.Write(genResponseStr("failure", "不存在对应的代码库类型！"))
         return
     }
 
-    reposRemote := params["repos_remote"]
+    reposRemote := req.FormValue("repos_remote")
 
     err := mh.StoreNewRepos(reposType, reposName, reposRemote)
     if err != nil {
@@ -224,19 +226,20 @@ func newRepos(w http.ResponseWriter, req *http.Request, params martini.Params) {
     return
 }
 
-func newHook(w http.ResponseWriter, params martini.Params) {
-    reposID := strconv.Atoi(params["repos_id"])
+func newHook(w http.ResponseWriter, req *http.Request) {
+    reposID, _ := strconv.Atoi(req.FormValue("repos_id"))
     if exist, _ := mh.CheckReposIDExist(reposID); exist == false {
         w.Write(genResponseStr("failure", "不存在指定的代码库！"))
         return
     }
-    whichBranch := params["which_branch"]
-    targetDir := params["target_dir"]
+    whichBranch := req.FormValue("which_branch")
+    targetDir := req.FormValue("target_dir")
     // 存入数据库的是绝对路径
-    targetDir, _ := filepath.Abs(targetDir)
+    targetDir, _ = filepath.Abs(targetDir)
 
-    updatedTime := time.Now().String()
+    updatedTime := time.Now().UTC().Format("2006-01-02 15:04:05")
     if err := mh.StoreNewHook(reposID, whichBranch, targetDir, updatedTime); err != nil {
+        fmt.Println(err)
         w.Write(genResponseStr("failure", "新增钩子失败！"))
         return
     }
@@ -244,8 +247,8 @@ func newHook(w http.ResponseWriter, params martini.Params) {
     return
 }
 
-func deleteRepos(w http.ResponseWriter, params martini.Params) {
-    reposID := strconv.Atoi(params["repos_id"])
+func deleteRepos(w http.ResponseWriter, req *http.Request) {
+    reposID, _ := strconv.Atoi(req.FormValue("repos_id"))
     // 先检测是否还有hook关联到该代码库
     if exist, _ := mh.CheckReposHasHook(reposID); exist == true {
         w.Write(genResponseStr("failure", "该代码库还关联有钩子！"))
@@ -259,20 +262,22 @@ func deleteRepos(w http.ResponseWriter, params martini.Params) {
     return
 }
 
-func deleteHook() {
-    hookID := strconv.Atoi(params["hook_id"])
+func deleteHook(w http.ResponseWriter, req *http.Request) {
+    hookID, _ := strconv.Atoi(req.FormValue("hook_id"))
     // 是否彻底删除（包括代码目录）？
-    eraseAll := params['erase_all']
+    eraseAll := req.FormValue("erase_all")
     targetDir, err := mh.GetHookTargetDir(hookID)
     if err != nil {
         w.Write(genResponseStr("failure", err.Error()))
         return
     }
-    err = os.RemoveAll(targetDir)
-    if err != nil {
-        fmt.Println("删除代码目录出错，", err.Error())
+    if eraseAll == "false" {
+        if err = os.RemoveAll(targetDir); err != nil {
+            fmt.Println("删除代码目录出错，", err.Error())
+        }        
     }
-    if err := mh.DeleteHook(hookID); err != nil {
+    
+    if err = mh.DeleteHook(hookID); err != nil {
         w.Write(genResponseStr("failure", "删除钩子失败！"))
         return
     }
@@ -296,7 +301,7 @@ func main() {
     }
 
     mh = models.ModelHelper{Db: db, Conf: conf}
-    err = mh.initDB()
+    err = mh.InitDB()
     if err != nil {
         fmt.Println("数据库操作失败！", err.Error())
         return

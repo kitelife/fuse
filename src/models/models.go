@@ -2,6 +2,8 @@ package models
 
 import (
     "database/sql"
+    "fmt"
+    "strconv"
     "time"
 
     "config"
@@ -38,7 +40,6 @@ type HookStruct struct {
     UpdatedTime string
 }
 
-
 type DBRelatedDataStruct struct {
     ReposStruct
     Hooks []HookStruct
@@ -50,7 +51,7 @@ type HomePageDataStruct struct {
     DBRelatedData []DBRelatedDataStruct
 }
 
-func (mh ModelHelper) initDB() (err error) {
+func (mh ModelHelper) InitDB() (err error) {
     // 如果目标数据表还不存在则创建
     tableRepos := `CREATE TABLE IF NOT EXISTS repos (
         repos_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -82,7 +83,7 @@ func (mh ModelHelper) initDB() (err error) {
 }
 
 func (mh ModelHelper) CheckReposNameExists(db *sql.DB, reposName string) (bool, error) {
-    targetSQL := `SELECT COUNT(*) FROM repos WHERE repos_name="?"`
+    targetSQL := "SELECT COUNT(*) FROM repos WHERE repos_name=?"
     rows, err := mh.Db.Query(targetSQL, reposName)
     if err != nil {
         return false, err
@@ -97,10 +98,11 @@ func (mh ModelHelper) CheckReposNameExists(db *sql.DB, reposName string) (bool, 
         }
         return true, nil
     }
+    return false, nil
 }
 
 func (mh ModelHelper) StoreNewRepos(reposType string, reposName string, reposRemote string) error {
-    targetSQL = `INSERT INTO repos (repos_name, repos_remote, repos_type) VALUES ("?", "?", "?")`
+    targetSQL := "INSERT INTO repos (repos_name, repos_remote, repos_type) VALUES (?, ?, ?)"
     if _, err := mh.Db.Exec(targetSQL, reposName, reposRemote, reposType); err != nil {
         return err
     }
@@ -109,8 +111,10 @@ func (mh ModelHelper) StoreNewRepos(reposType string, reposName string, reposRem
 
 // mh.StoreNewHook(reposID, whichBranch, targetDir, updatedTime)
 func (mh ModelHelper) StoreNewHook(reposID int, whichBranch string, targetDir string, updatedTime string) error {
-    targetSQL := `INSERT INTO hook (repos_id, which_branch, target_dir, updated_time) VALUES (?, "?", "?", "?")`
-    if _, err := mh.Db.Exec(targetSQL, reposID, whichBranch, targetDir, updatedTime); err != nil {
+    hookStatus := "ready"
+    logContent := ""
+    targetSQL := "INSERT INTO hooks (repos_id, which_branch, target_dir, hook_status, log_content, updated_time) VALUES (?, ?, ?, ?, ?, ?)"
+    if _, err := mh.Db.Exec(targetSQL, reposID, whichBranch, targetDir, hookStatus, logContent, updatedTime); err != nil {
         return err
     }
     return nil
@@ -121,14 +125,14 @@ func (mh ModelHelper) QueryDBForHookHandler() (map[int]ReposStruct, map[int]Bran
     reposDataSQL := "SELECT repos_id, repos_name, repos_remote repos_type FROM repos"
     reposRows, err := mh.Db.Query(reposDataSQL)
     if err != nil {
-        return nil, nil
+        return nil, nil, nil
     }
     defer reposRows.Close()
 
     hooksDataSQL := "SELECT hook_id, repos_id, which_branch, target_dir FROM hooks"
     hooksRows, err := mh.Db.Query(hooksDataSQL)
     if err != nil {
-        return nil, nil
+        return nil, nil, nil
     }
     defer hooksRows.Close()
 
@@ -145,7 +149,7 @@ func (mh ModelHelper) QueryDBForHookHandler() (map[int]ReposStruct, map[int]Bran
         reposRows.Scan(&reposID, &reposName, &reposRemote, &reposType)
         reposAll[reposID] = ReposStruct{ReposID: reposID, ReposName: reposName,
             ReposRemote: reposRemote, ReposType: reposType,
-            WebHookURL: mh.Conf.Host + "/" + reposType + "/" + reposID
+            WebHookURL: mh.Conf.Host + "/" + reposType + "/" + strconv.Itoa(reposID),
         }
     }
 
@@ -181,7 +185,7 @@ func (mh ModelHelper) QueryDBForViewHome()(reposList map[int]string, dbRelatedDa
         fmt.Println("数据库查询出错！", err.Error())
         return
     }
-
+    
     var reposID int
 
     var hookID int
@@ -189,7 +193,7 @@ func (mh ModelHelper) QueryDBForViewHome()(reposList map[int]string, dbRelatedDa
     var targetDir string
     var hookStatus string
     var logContent string
-    var updatedTime string
+    var updatedTime time.Time
 
     var hooks map[int][]HookStruct = make(map[int][]HookStruct)
     for hooksRows.Next() {
@@ -198,8 +202,7 @@ func (mh ModelHelper) QueryDBForViewHome()(reposList map[int]string, dbRelatedDa
             // 1024: 每个代码库最多能够1024个分支，也即1024个hook
             hooks[reposID] = make([]HookStruct, 0, 1024)
         }
-        //dbRelatedData[reposID].Hooks = append(dbRelatedData[reposID].Hooks, HookStruct{hookID, reposID, whichBranch, targetDir, hookStatus, logContent, updatedTime})
-        hooks[reposID] = append(hooks[reposID], HookStruct{hookID, reposID, whichBranch, targetDir, hookStatus, logContent, updatedTime})
+        hooks[reposID] = append(hooks[reposID], HookStruct{hookID, reposID, whichBranch, targetDir, hookStatus, logContent, updatedTime.Format("2006-01-02 15:04:05")})
     }
 
     var reposName string
@@ -208,16 +211,15 @@ func (mh ModelHelper) QueryDBForViewHome()(reposList map[int]string, dbRelatedDa
     for reposRows.Next() {
         reposRows.Scan(&reposID, &reposName, &reposRemote, &reposType)
         dbRelatedData = append(dbRelatedData, DBRelatedDataStruct{ReposStruct{reposID, reposName,
-            reposRemote, reposType, mh.Conf.Host + "/" + reposType + "/" + reposID}, hooks[reposID]
+            reposRemote, reposType, mh.Conf.Host + "/" + reposType + "/" + strconv.Itoa(reposID)}, hooks[reposID],
         })
         reposList[reposID] = reposName
     }
-
     return reposList, dbRelatedData
 }
 
 func (mh ModelHelper) CheckReposIDExist (reposID int) (bool, error) {
-    targetSQL := `SELECT COUNT(*) FROM repos WHERE repos_id=?`
+    targetSQL := "SELECT COUNT(*) FROM repos WHERE repos_id=?"
     rows, err := mh.Db.Query(targetSQL, reposID)
     if err != nil {
         return false, err
@@ -231,10 +233,11 @@ func (mh ModelHelper) CheckReposIDExist (reposID int) (bool, error) {
         }
         return true, nil
     }
+    return false, nil
 }
 
 func (mh ModelHelper) DeleteRepos(reposID int) error {
-    targetSQL := `DELETE FROM repos WHERE repos_id=?`
+    targetSQL := "DELETE FROM repos WHERE repos_id=?"
     if _, err := mh.Db.Exec(targetSQL, reposID); err != nil {
         return err
     }
@@ -242,7 +245,7 @@ func (mh ModelHelper) DeleteRepos(reposID int) error {
 }
 
 func (mh ModelHelper) DeleteHook(hookID int) error {
-    targetSQL := `DELETE FROM hook WHERE hook_id=?`
+    targetSQL := "DELETE FROM hook WHERE hook_id=?"
     if _, err := mh.Db.Exec(targetSQL, hookID); err != nil {
         return err
     }
@@ -265,6 +268,7 @@ func (mh ModelHelper) CheckReposHasHook (reposID int) (bool, error) {
         }
         return true, nil
     }
+    return false, nil
 }
 
 func (mh ModelHelper) GetHookTargetDir (hookID int) (string, error) {
@@ -283,8 +287,8 @@ func (mh ModelHelper) GetHookTargetDir (hookID int) (string, error) {
 }
 
 func (mh ModelHelper) UpdateLogStatus(hookID int, hookStatus string, logContent string) error {
-    now := time.Now().String()
-    targetSQL := `UPDATE hook SET hook_status="?", log_content="?", updated_time="?" WHERE hook_id=?`
+    now := time.Now().UTC().Format("2006-01-02 15:04:05")
+    targetSQL := "UPDATE hooks SET hook_status=?, log_content=?, updated_time=? WHERE hook_id=?"
     _, err := mh.Db.Exec(targetSQL, hookStatus, logContent, now, hookID)
     return err
 }

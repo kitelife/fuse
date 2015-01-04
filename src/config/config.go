@@ -1,7 +1,9 @@
 package config
 
 import (
+    "bytes"
     "encoding/json"
+    "io"
     "os"
 )
 
@@ -41,7 +43,7 @@ func readJson(f *os.File) (conf ConfStruct, err error) {
 }
 
 func ParseConf() (conf ConfStruct, err error) {
-    f, err := os.OpenFile("./conf/app.json", os.O_RDONLY)
+    f, err := os.OpenFile("./conf/app.json", os.O_RDONLY, 0666)
     if err != nil {
         return conf, err
     }

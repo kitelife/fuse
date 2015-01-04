@@ -1,3 +1,7 @@
 .navbar-row {
     margin-top: 20px;
 }
+
+.panel-body > table {
+    margin-top: 20px;
+}

@@ -1,10 +1,19 @@
 $(function() {
-    if ($('[data-toggle="select"]').length) {
-        $('[data-toggle="select"]').select2();
-    }
+    
+    $('#for_new_repos').on('click', function(e) {
+        e.preventDefault();
+        
+        $('#new_repos_modal').modal('show');
+    });
+    
+    $('#for_new_hook').on('click', function(e) {
+        e.preventDefault();
+        
+        $('#new_hook_modal').modal('show');
+    });
 
     $('#button_new_repos').on('click', function(e) {
-        e.preventDefaults();
+        e.preventDefault();
 
         var pluginID = $('#select_plugin > option:selected').val(),
             reposName = $('input[name="repos_name"]').val(),
@@ -26,7 +35,7 @@ $(function() {
             'dataType': 'json'
         });
         req.done(function (resp) {
-            $('#new_repos_modal').model('hide');
+            $('#new_repos_modal').modal('hide');
             if (resp.Status === 'success') {
                 alertify.log(resp.Msg, 'success', 1000);
                 setTimeout("window.location.href='/'", 1500);
@@ -37,7 +46,7 @@ $(function() {
     });
 
     $('#button_new_hook').on('click', function(e) {
-        e.preventDefaults();
+        e.preventDefault();
 
         var targetRepos = $('#select_repos > option:selected').val(),
             branchName = $('input[name="branch_name"]').val(),
@@ -59,7 +68,7 @@ $(function() {
             'dataType': 'json'
         });
         req.done(function (resp) {
-            $('#new_hook_modal').model('hide');
+            $('#new_hook_modal').modal('hide');
             if (resp.Status === 'success') {
                 alertify.log(resp.Msg, 'success', 1000);
                 setTimeout("window.location.href='/'", 1500);
