@@ -208,7 +208,6 @@ func newRepos(w http.ResponseWriter, req *http.Request) {
     }
     
     reposType := req.FormValue("repos_type")
-    fmt.Println("repos_type: ", reposType)
     
     if plugin_manager.HasThisPlugin(reposType) == false {
         w.Write(genResponseStr("failure", "不存在对应的代码库类型！"))
