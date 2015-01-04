@@ -3,10 +3,13 @@ package models
 import (
     "database/sql"
     "time"
+
+    "config"
 )
 
 type ModelHelper struct {
     Db *sql.DB
+    Conf config.ConfStruct
 }
 
 type Branch2DirMap map[string]string
@@ -22,6 +25,7 @@ type ReposStruct struct {
     ReposName   string
     ReposRemote string
     ReposType string
+    WebHookURL string
 }
 
 type HookStruct struct {
@@ -139,7 +143,10 @@ func (mh ModelHelper) QueryDBForHookHandler() (map[int]ReposStruct, map[int]Bran
     var reposType string
     for reposRows.Next() {
         reposRows.Scan(&reposID, &reposName, &reposRemote, &reposType)
-        reposAll[reposID] = ReposStruct{ReposID: reposID, ReposName: reposName, ReposRemote: reposRemote, ReposType: reposType}
+        reposAll[reposID] = ReposStruct{ReposID: reposID, ReposName: reposName,
+            ReposRemote: reposRemote, ReposType: reposType,
+            WebHookURL: mh.Conf.Host + "/" + reposType + "/" + reposID
+        }
     }
 
     var hookID int
@@ -200,7 +207,9 @@ func (mh ModelHelper) QueryDBForViewHome()(reposList map[int]string, dbRelatedDa
     var reposType string
     for reposRows.Next() {
         reposRows.Scan(&reposID, &reposName, &reposRemote, &reposType)
-        dbRelatedData = append(dbRelatedData, DBRelatedDataStruct{ReposStruct{reposID, reposName, reposRemote, reposType}, hooks[reposID]})
+        dbRelatedData = append(dbRelatedData, DBRelatedDataStruct{ReposStruct{reposID, reposName,
+            reposRemote, reposType, mh.Conf.Host + "/" + reposType + "/" + reposID}, hooks[reposID]
+        })
         reposList[reposID] = reposName
     }
 

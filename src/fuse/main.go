@@ -15,6 +15,7 @@ import (
     "github.com/go-martini/martini"
     _ "github.com/mattn/go-sqlite3"
 
+    "config"
     "plugin_manager"
     _ "plugins"
     "models"
@@ -23,6 +24,7 @@ import (
 var masterAbsPath string
 var db *sql.DB
 var mh models.ModelHelper
+var conf config.ConfStruct
 
 func genResponseStr(status string, message string) []byte {
     resp := models.ResponseStruct{
@@ -287,7 +289,13 @@ func main() {
     }
     defer db.Close()
 
-    mh = models.ModelHelper{Db: db}
+    conf, err = config.ParseConf()
+    if err != nil {
+        fmt.Println("配置文件解析失败！", err.Error())
+        return
+    }
+
+    mh = models.ModelHelper{Db: db, Conf: conf}
     err = mh.initDB()
     if err != nil {
         fmt.Println("数据库操作失败！", err.Error())
