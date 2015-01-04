@@ -2,10 +2,48 @@ package models
 
 import (
     "database/sql"
+    "time"
 )
 
 type ModelHelper struct {
     Db *sql.DB
+}
+
+type Branch2DirMap map[string]string
+type Branch2HookMap map[string]int
+
+type ResponseStruct struct {
+    Status string
+    Msg    string
+}
+
+type ReposStruct struct {
+    ReposID     int
+    ReposName   string
+    ReposRemote string
+    ReposType string
+}
+
+type HookStruct struct {
+    HookID      int
+    ReposID     int
+    WhichBranch string
+    TargetDir   string
+    HookStatus string
+    LogContent string
+    UpdatedTime string
+}
+
+
+type DBRelatedDataStruct struct {
+    ReposStruct
+    Hooks []HookStruct
+}
+
+type HomePageDataStruct struct {
+    PluginIDList []string
+    ReposList map[int]string
+    DBRelatedData []DBRelatedDataStruct
 }
 
 func (mh ModelHelper) initDB() (err error) {
@@ -74,7 +112,7 @@ func (mh ModelHelper) StoreNewHook(reposID int, whichBranch string, targetDir st
     return nil
 }
 
-func (mh ModelHelper) QueryDBForHookHandler() (map[int]ReposStruct, map[int]Branch2DirMap) {
+func (mh ModelHelper) QueryDBForHookHandler() (map[int]ReposStruct, map[int]Branch2DirMap, map[int]Branch2HookMap) {
     // 尝试读取数据
     reposDataSQL := "SELECT repos_id, repos_name, repos_remote repos_type FROM repos"
     reposRows, err := mh.Db.Query(reposDataSQL)
@@ -83,7 +121,7 @@ func (mh ModelHelper) QueryDBForHookHandler() (map[int]ReposStruct, map[int]Bran
     }
     defer reposRows.Close()
 
-    hooksDataSQL := "SELECT repos_id, which_branch, target_dir FROM hooks"
+    hooksDataSQL := "SELECT hook_id, repos_id, which_branch, target_dir FROM hooks"
     hooksRows, err := mh.Db.Query(hooksDataSQL)
     if err != nil {
         return nil, nil
@@ -92,6 +130,7 @@ func (mh ModelHelper) QueryDBForHookHandler() (map[int]ReposStruct, map[int]Bran
 
     reposAll := make(map[int]ReposStruct)
     reposBranch2Dir := make(map[int]Branch2DirMap)
+    reposBranch2Hook := make(map[int]Branch2HookMap)
 
     var reposID int
 
@@ -102,18 +141,22 @@ func (mh ModelHelper) QueryDBForHookHandler() (map[int]ReposStruct, map[int]Bran
         reposRows.Scan(&reposID, &reposName, &reposRemote, &reposType)
         reposAll[reposID] = ReposStruct{ReposID: reposID, ReposName: reposName, ReposRemote: reposRemote, ReposType: reposType}
     }
+
+    var hookID int
     var whichBranch string
     var targetDir string
     for hooksRows.Next() {
-        hooksRows.Scan(&reposID, &whichBranch, &targetDir)
+        hooksRows.Scan(&hookID, &reposID, &whichBranch, &targetDir)
         _, ok := reposBranch2Dir[reposID]
         if ok == false {
             reposBranch2Dir[reposID] = map[string]string{whichBranch: targetDir}
+            reposBranch2Hook[reposID] = map[string]int{whichBranch: hookID}
         } else {
             reposBranch2Dir[reposID][whichBranch] = targetDir
+            reposBranch2Hook[reposID][whichBranch] = hookID
         }
     }
-    return reposAll, reposBranch2Dir
+    return reposAll, reposBranch2Dir, reposBranch2Hook
 }
 
 func (mh ModelHelper) QueryDBForViewHome()(reposList map[int]string, dbRelatedData []DBRelatedDataStruct) {
@@ -228,4 +271,11 @@ func (mh ModelHelper) GetHookTargetDir (hookID int) (string, error) {
         break
     }
     return targetDir, nil
+}
+
+func (mh ModelHelper) UpdateLogStatus(hookID int, hookStatus string, logContent string) error {
+    now := time.Now().String()
+    targetSQL := `UPDATE hook SET hook_status="?", log_content="?", updated_time="?" WHERE hook_id=?`
+    _, err := mh.Db.Exec(targetSQL, hookStatus, logContent, now, hookID)
+    return err
 }
