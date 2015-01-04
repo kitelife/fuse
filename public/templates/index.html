@@ -68,7 +68,7 @@
                                 <tr>
                                     <td class="branch-name">{{ $hook.WhichBranch }}</td>
                                     <td class="target-dir">{{ $hook.TargetDir }}</td>
-                                    <td class="hook-status">{{ $hook.HookStatus }}</td>
+                                    <td class="hook-status"><span class="label {{ $hook.HookStatus }}">{{ $hook.HookStatus }}</span></td>
                                     <td class="log-content">{{ $hook.LogContent }}</td>
                                     <td class="updated-time">{{ $hook.UpdatedTime }}</td>
                                 </tr>

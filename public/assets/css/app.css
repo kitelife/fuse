@@ -5,3 +5,23 @@
 .panel-body > table {
     margin-top: 20px;
 }
+
+.ready {
+    background-color: #777;
+}
+
+.error {
+    background-color: #D9534F;
+}
+
+.failure {
+    background-color: #F0AD4E;
+}
+
+.success {
+    background-color: #5CB85C;
+}
+
+td, th {
+    text-align: center;
+}
