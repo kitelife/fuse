@@ -122,7 +122,7 @@ func (mh ModelHelper) StoreNewHook(reposID int, whichBranch string, targetDir st
 
 func (mh ModelHelper) QueryDBForHookHandler() (map[int]ReposStruct, map[int]Branch2DirMap, map[int]Branch2HookMap) {
     // 尝试读取数据
-    reposDataSQL := "SELECT repos_id, repos_name, repos_remote repos_type FROM repos"
+    reposDataSQL := "SELECT repos_id, repos_name, repos_remote, repos_type FROM repos"
     reposRows, err := mh.Db.Query(reposDataSQL)
     if err != nil {
         return nil, nil, nil

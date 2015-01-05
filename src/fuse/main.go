@@ -48,6 +48,12 @@ func logHookStatus(hookID int, hookStatus string, logContent string) {
     }
 }
 
+func ChangeDir(targetDir) {
+    if err := os.Chdir(targetDir); err != nil {
+        fmt.Println(err.Error())
+    }
+}
+
 func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.Params) {
     w.Header().Set("Content-Type", "application/json")
 
@@ -110,7 +116,7 @@ func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.P
     // absTargetPath, _ := filepath.Abs(targetDir)
     if checkPathExist(targetDir) == false {
         // 创建新目录可能会失败
-        if err = os.Mkdir(targetDir, 0666); err != nil {
+        if err = os.MkdirAll(targetDir, 0666); err != nil {
             // 记录状态用于页面展示
             // 三种状态：error、failure、success
             // error 表示系统错误
@@ -132,6 +138,9 @@ func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.P
         w.Write(genResponseStr("Error", "系统错误！"))
         return
     }
+
+    // 确保函数执行结束后能切换回原工作目录
+    defer ChangeDir(pwd)
 
     if isNew {
         cloneCMD := exec.Command("git", "clone", reposRemoteURL, ".")
@@ -175,10 +184,6 @@ func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.P
         fmt.Println(errMsg)
         w.Write(genResponseStr("failure", "Git Pull失败！"))
         return
-    }
-    // 切换回原工作目录
-    if err := os.Chdir(pwd); err != nil {
-        fmt.Println(err.Error())
     }
 
     logHookStatus(targetHookID, "success", "自动更新成功！")
