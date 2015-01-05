@@ -21,6 +21,14 @@ import (
     "models"
 )
 
+type ChanElementStruct struct {
+    RemoteURL string
+    BranchName string
+}
+
+type BranchChanMap map[int]chan ChanElementStruct
+type ReposBranchChanMap map[int]BranchChanMap
+
 var masterAbsPath string
 var db *sql.DB
 var mh models.ModelHelper
@@ -287,6 +295,14 @@ func deleteHook(w http.ResponseWriter, req *http.Request) {
     }
     w.Write(genResponseStr("success", "成功删除钩子"))
     return
+}
+
+func HookWorker(oneChan chan ChanElementStruct) {
+
+}
+
+func RunWorkers(chans ReposBranchChanMap) {
+    
 }
 
 func main() {
