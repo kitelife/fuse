@@ -88,6 +88,7 @@ $(function() {
 
     $('.branch-name').on('dblclick', function(e) {
         e.preventDefault();
+        e.stopPropagation();
 
         var hookID = $(this).prev('.hook-id').text(),
             branchName = $(this).text();
@@ -122,6 +123,7 @@ $(function() {
 
     $('.repos-title').on('dblclick', function(e) {
         e.preventDefault();
+        e.stopPropagation();
 
         var targetElement = $(this).children('.panel-heading').children('.panel-title').children('span');
             reposID = targetElement.attr('title'),

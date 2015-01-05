@@ -245,7 +245,7 @@ func (mh ModelHelper) DeleteRepos(reposID int) error {
 }
 
 func (mh ModelHelper) DeleteHook(hookID int) error {
-    targetSQL := "DELETE FROM hook WHERE hook_id=?"
+    targetSQL := "DELETE FROM hooks WHERE hook_id=?"
     if _, err := mh.Db.Exec(targetSQL, hookID); err != nil {
         return err
     }
