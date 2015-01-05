@@ -48,7 +48,7 @@ func logHookStatus(hookID int, hookStatus string, logContent string) {
     }
 }
 
-func ChangeDir(targetDir) {
+func ChangeDir(targetDir string) {
     if err := os.Chdir(targetDir); err != nil {
         fmt.Println(err.Error())
     }
