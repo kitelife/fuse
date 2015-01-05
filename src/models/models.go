@@ -149,7 +149,7 @@ func (mh ModelHelper) QueryDBForHookHandler() (map[int]ReposStruct, map[int]Bran
         reposRows.Scan(&reposID, &reposName, &reposRemote, &reposType)
         reposAll[reposID] = ReposStruct{ReposID: reposID, ReposName: reposName,
             ReposRemote: reposRemote, ReposType: reposType,
-            WebHookURL: mh.Conf.Host + "/" + reposType + "/" + strconv.Itoa(reposID),
+            WebHookURL: mh.Conf.Host + "/webhook/" + reposType + "/" + strconv.Itoa(reposID),
         }
     }
 
@@ -185,7 +185,7 @@ func (mh ModelHelper) QueryDBForViewHome()(reposList map[int]string, dbRelatedDa
         fmt.Println("数据库查询出错！", err.Error())
         return
     }
-    
+
     var reposID int
 
     var hookID int
@@ -211,7 +211,7 @@ func (mh ModelHelper) QueryDBForViewHome()(reposList map[int]string, dbRelatedDa
     for reposRows.Next() {
         reposRows.Scan(&reposID, &reposName, &reposRemote, &reposType)
         dbRelatedData = append(dbRelatedData, DBRelatedDataStruct{ReposStruct{reposID, reposName,
-            reposRemote, reposType, mh.Conf.Host + "/" + reposType + "/" + strconv.Itoa(reposID)}, hooks[reposID],
+            reposRemote, reposType, mh.Conf.Host + "/webhook/" + reposType + "/" + strconv.Itoa(reposID)}, hooks[reposID],
         })
         reposList[reposID] = reposName
     }

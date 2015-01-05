@@ -53,6 +53,8 @@ func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.P
 
     repos, reposBranch2Dir, reposBranch2Hook := mh.QueryDBForHookHandler()
 
+    fmt.Println(repos)
+
     reposID, err := strconv.Atoi(params["repos_id"])
     if err != nil {
         fmt.Println("请求URL错误！")
@@ -206,9 +208,9 @@ func newRepos(w http.ResponseWriter, req *http.Request) {
         w.Write(genResponseStr("failure", "该代码库已存在！"))
         return
     }
-    
+
     reposType := req.FormValue("repos_type")
-    
+
     if plugin_manager.HasThisPlugin(reposType) == false {
         w.Write(genResponseStr("failure", "不存在对应的代码库类型！"))
         return
@@ -273,9 +275,9 @@ func deleteHook(w http.ResponseWriter, req *http.Request) {
     if eraseAll == "false" {
         if err = os.RemoveAll(targetDir); err != nil {
             fmt.Println("删除代码目录出错，", err.Error())
-        }        
+        }
     }
-    
+
     if err = mh.DeleteHook(hookID); err != nil {
         w.Write(genResponseStr("failure", "删除钩子失败！"))
         return
@@ -316,5 +318,5 @@ func main() {
 
     m.Post("/webhook/(?P<plugin_id>[a-zA-Z]+)/(?P<repos_id>[0-9]+)", hookEventHandler)
 
-    m.Run()
+    m.RunOnAddr(":8788")
 }
