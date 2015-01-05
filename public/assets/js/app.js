@@ -126,7 +126,7 @@ $(function() {
         e.preventDefault();
         e.stopPropagation();
 
-        var targetElement = $(this).children('.panel-heading').children('.panel-title').children('span');
+        var targetElement = $(this).children('.panel-title').children('span');
             reposID = targetElement.attr('title'),
             reposName = targetElement.text();
         alertify.confirm('你确定删除' + reposName +'仓库吗？', function (e) {
