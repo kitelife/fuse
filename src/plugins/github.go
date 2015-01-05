@@ -1,5 +1,7 @@
 package plugins
 
+// 待测试
+
 // push事件的JSON请求体结构参见：https://developer.github.com/v3/activity/events/types/#pushevent
 
 import (
