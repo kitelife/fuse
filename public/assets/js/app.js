@@ -108,7 +108,8 @@ $(function() {
 
                 req.done(function (resp) {
                     if (resp.Status === 'success') {
-                        alertify.log(resp.Msg, 'success', 3000);
+                        alertify.log(resp.Msg, 'success', 1000);
+                        setTimeout("window.location.href='/'", 1500);
                     } else {
                         alertify.log(resp.Msg, 'error', 5000);
                     }
@@ -142,7 +143,8 @@ $(function() {
 
                 req.done(function (resp) {
                     if (resp.Status === 'success') {
-                        alertify.log(resp.Msg, 'success', 3000);
+                        alertify.log(resp.Msg, 'success', 1000);
+                        setTimeout("window.location.href='/'", 1500);
                     } else {
                         alertify.log(resp.Msg, 'error', 5000);
                     }
