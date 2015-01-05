@@ -86,7 +86,7 @@ $(function() {
         });
     });
 
-    $('.branch-name').on('dblclick', function(e) {
+    $('td.branch-name').on('dblclick', function(e) {
         e.preventDefault();
         e.stopPropagation();
 

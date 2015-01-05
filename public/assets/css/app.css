@@ -29,3 +29,7 @@ td, th {
 .hook-id {
     display: none;
 }
+
+td.branch-name,.repos-title {
+    cursor: pointer;
+}
