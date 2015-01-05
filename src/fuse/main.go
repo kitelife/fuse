@@ -59,8 +59,6 @@ func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.P
 
     repos, reposBranch2Dir, reposBranch2Hook := mh.QueryDBForHookHandler()
 
-    fmt.Println(repos)
-
     reposID, err := strconv.Atoi(params["repos_id"])
     if err != nil {
         fmt.Println("请求URL错误！")
