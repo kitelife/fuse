@@ -111,6 +111,7 @@ func (gogs GogsStruct) Parse(req *http.Request) (reposRemoteURL string, branchNa
 
     branchName = branchParts[branchPartsLength-1]
     reposRemoteURL = prbs.Repository.Url
+    // 这里的reposRemoteURL是需要的远程仓库的地址么？
     return reposRemoteURL, branchName
 }
 
