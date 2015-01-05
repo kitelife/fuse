@@ -19,9 +19,6 @@
         <![endif]-->
     </head>
     <body>
-        <a href="https://github.com/youngsterxyf/version_sentinel">
-            <img style="position: absolute; top: 0; right: 0; border: 0; z-index:1000;" src="/assets/img/forkme_right_orange_ff7600.png" alt="Fork me on GitHub">
-        </a>
         <div class="container">
             <div class="row navbar-row">
                 <div class="col-xs-12">
@@ -32,7 +29,7 @@
                     <div class="collapse navbar-collapse">
                         <ul class="nav navbar-nav navbar-right">
                             <li id="for_new_repos"><a href="#">新增仓库</a></li>
-                            <li id="for_new_hook"><a href="#">新增钩子</a></li>
+                            <li id="for_new_hook"><a href="#">新增分支</a></li>
 
                             <li id="for_placeholder"><a href="#"></a></li>
                         </ul>
@@ -42,7 +39,7 @@
             </div>
             <div class="row content-row">
                 {{ range .DBRelatedData }}
-                <div class="panel panel-default">
+                <div class="panel panel-default repos-title">
                     <div class="panel-heading">
                         <h3 class="panel-title"><span title="{{ .ReposID }}">{{ .ReposName }}</span></h3>
                     </div>
@@ -56,6 +53,7 @@
                         <table class="table table-striped table-bordered">
                             <thead>
                                 <tr>
+                                    <th class="hook-id">#</th>
                                     <th class="branch-name">分支</th>
                                     <th class="target-dir">代码目录</th>
                                     <th class="hook-status">状态</th>
@@ -66,6 +64,7 @@
                             <tbody>
                                 {{ range $index, $hook := .Hooks }}
                                 <tr>
+                                    <td class="hook-id">{{ $hook.HookID }}</td>
                                     <td class="branch-name">{{ $hook.WhichBranch }}</td>
                                     <td class="target-dir">{{ $hook.TargetDir }}</td>
                                     <td class="hook-status"><span class="label {{ $hook.HookStatus }}">{{ $hook.HookStatus }}</span></td>

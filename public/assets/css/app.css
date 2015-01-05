@@ -25,3 +25,7 @@
 td, th {
     text-align: center;
 }
+
+.hook-id {
+    display: none;
+}

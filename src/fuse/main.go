@@ -257,7 +257,7 @@ func deleteRepos(w http.ResponseWriter, req *http.Request) {
     reposID, _ := strconv.Atoi(req.FormValue("repos_id"))
     // 先检测是否还有hook关联到该代码库
     if exist, _ := mh.CheckReposHasHook(reposID); exist == true {
-        w.Write(genResponseStr("failure", "该代码库还关联有钩子！"))
+        w.Write(genResponseStr("failure", "该代码库还关联有分支hook！"))
         return
     }
     if err := mh.DeleteRepos(reposID); err != nil {
@@ -277,7 +277,7 @@ func deleteHook(w http.ResponseWriter, req *http.Request) {
         w.Write(genResponseStr("failure", err.Error()))
         return
     }
-    if eraseAll == "false" {
+    if eraseAll == "true" {
         if err = os.RemoveAll(targetDir); err != nil {
             fmt.Println("删除代码目录出错，", err.Error())
         }
