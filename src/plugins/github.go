@@ -39,7 +39,7 @@ type GithubCommitInfoStruct struct {
 
 type GithubHeadCommitInfoStruct GithubCommitInfoStruct
 
-type GithubReposOwnerInfoStruct {
+type GithubReposOwnerInfoStruct struct {
     Name string
     Email string
 }
