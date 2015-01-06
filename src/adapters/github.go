@@ -154,13 +154,13 @@ type GithubPushRequestBodyStruct struct {
     Sender GithubSenderInfoStruct
 }
 
-func (github GithubStruct) Parse(req *http.Request) (adapter_manager.FilteredEventDataStruct) {
+func (github GithubStruct) Parse(req *http.Request) (filteredEventData adapter_manager.FilteredEventDataStruct) {
     var prbs GithubPushRequestBodyStruct
     eventDecoder := json.NewDecoder(req.Body)
     err := eventDecoder.Decode(&prbs)
     if err != nil {
         fmt.Println(err.Error())
-        return nil
+        return
     }
     // 记录日志
     // reqBodyStr, _ := json.MarshalIndent(prb, "", "    ")
@@ -170,16 +170,16 @@ func (github GithubStruct) Parse(req *http.Request) (adapter_manager.FilteredEve
     branchPartsLength := len(branchParts)
     if branchPartsLength == 0 {
         fmt.Println("请求内容中分支不正确！", prbs.Ref)
-        return nil
+        return
     }
 
     commitCount := len(prbs.Commits)
     if commitCount == 0 {
         fmt.Println("本次push事件中commit数目为0")
-        return nil
+        return
     }
     // 这里的ReposRemoteURL是需要的远程仓库的地址么？
-    filteredEventData := FilteredEventDataStruct {
+    filteredEventData = FilteredEventDataStruct {
         ReposRemoteURL: prbs.Repository.Git_url,
         BranchName: branchParts[branchPartsLength-1],
         LatestCommit: prbs.Commits[commitCount-1].Id,
