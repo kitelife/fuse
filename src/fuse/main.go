@@ -195,8 +195,8 @@ func deleteRepos(w http.ResponseWriter, req *http.Request) {
     signalChannels[reposID] <- 0
     close(eventChannels[reposID])
     close(signalChannels[reposID])
-    delete(eventChannels[reposID])
-    delete(signalChannels[reposID])
+    delete(eventChannels, reposID)
+    delete(signalChannels, reposID)
 
     w.Write(genResponseStr("success", "成功删除代码库记录"))
     return
@@ -226,8 +226,8 @@ func deleteHook(w http.ResponseWriter, req *http.Request) {
     return
 }
 
-func HookWorker(eventChan chan ChanElementStruct, signalChan chan int) {
-    var oneEvent ChanElementStruct
+func HookWorker(eventChan chan models.ChanElementStruct, signalChan chan int) {
+    var oneEvent models.ChanElementStruct
     for {
         select {
             case oneEvent = <-eventChan:
