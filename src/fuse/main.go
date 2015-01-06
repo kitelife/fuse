@@ -227,6 +227,7 @@ func deleteHook(w http.ResponseWriter, req *http.Request) {
 }
 
 func HookWorker(eventChan chan models.ChanElementStruct, signalChan chan int) {
+    fmt.Println("New HookWorker goroutine is running!")
     var oneEvent models.ChanElementStruct
     for {
         select {
