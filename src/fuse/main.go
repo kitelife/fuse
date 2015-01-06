@@ -7,7 +7,6 @@ import (
     "html/template"
     "net/http"
     "os"
-    "os/exec"
     "path/filepath"
     "strconv"
     "time"
@@ -107,7 +106,7 @@ func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.P
     }
 
     // 将事件数据传入管道
-    eventChannels[reposID][targetHookID] <- newEventData
+    eventChannels[reposID] <- newEventData
 
     w.Write(genResponseStr("success", "成功！"))
     return
@@ -171,7 +170,7 @@ func newHook(w http.ResponseWriter, req *http.Request) {
     targetDir, _ = filepath.Abs(targetDir)
 
     updatedTime := time.Now().UTC().Format("2006-01-02 15:04:05")
-    if err := mh.StoreNewHook(reposID, whichBranch, targetDir, updatedTime); err != nil {
+    if _, err := mh.StoreNewHook(reposID, whichBranch, targetDir, updatedTime); err != nil {
         fmt.Println(err)
         w.Write(genResponseStr("failure", "新增钩子失败！"))
         return

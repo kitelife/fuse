@@ -112,12 +112,31 @@ func (mh ModelHelper) CheckReposNameExists(db *sql.DB, reposName string) (bool, 
     return false, nil
 }
 
-func (mh ModelHelper) StoreNewRepos(reposType string, reposName string, reposRemote string) error {
+func (mh ModelHelper) StoreNewRepos(reposType string, reposName string, reposRemote string) (int, error) {
     targetSQL := "INSERT INTO repos (repos_name, repos_remote, repos_type) VALUES (?, ?, ?)"
-    if _, err := mh.Db.Exec(targetSQL, reposName, reposRemote, reposType); err != nil {
-        return err
+    oneTrans, err := mh.Db.Begin()
+    if err != nil {
+        fmt.Println(err.Error())
+        return -1, err
     }
-    return nil
+    insertResult, err := mh.Db.Exec(targetSQL, reposName, reposRemote, reposType)
+    if err != nil {
+        fmt.Println(err.Error())
+        return -1, err
+    }
+    newReposID, err := insertResult.LastInsertId()
+    if err != nil {
+        fmt.Println(err.Error())
+        if rollbackErr := oneTrans.Rollback(); rollbackErr != nil {
+            fmt.Println(rollbackErr.Error())
+        }
+        return -1, nil
+    }
+    if err := oneTrans.Commit(); err != nil {
+        fmt.Println(err.Error())
+        return -1, err
+    }
+    return int(newReposID), nil
 }
 
 // mh.StoreNewHook(reposID, whichBranch, targetDir, updatedTime)
@@ -138,18 +157,19 @@ func (mh ModelHelper) StoreNewHook(reposID int, whichBranch string, targetDir st
         }
         return -1, err
     }
-    newReposID, err := insertResult.LastInsertId()
+    newHookID, err := insertResult.LastInsertId()
     if err != nil {
         fmt.Println(err.Error())
         if rollbackErr := oneTrans.Rollback(); rollbackErr != nil {
             fmt.Println(rollbackErr.Error())
         }
+        return -1, nil
     }
     if err := oneTrans.Commit(); err != nil {
         fmt.Println(err.Error())
         return -1, err
     }
-    return int(newReposID), nil
+    return int(newHookID), nil
 }
 
 func (mh ModelHelper) QueryDBForHookHandler() (map[int]ReposStruct, map[int]Branch2DirMap, map[int]Branch2HookMap) {
