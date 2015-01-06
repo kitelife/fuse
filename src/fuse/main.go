@@ -193,8 +193,6 @@ func deleteRepos(w http.ResponseWriter, req *http.Request) {
 
     // 关闭对应的goroutine和channel
     signalChannels[reposID] <- 0
-    close(eventChannels[reposID])
-    close(signalChannels[reposID])
     delete(eventChannels, reposID)
     delete(signalChannels, reposID)
 
@@ -228,17 +226,19 @@ func deleteHook(w http.ResponseWriter, req *http.Request) {
 
 func HookWorker(eventChan chan models.ChanElementStruct, signalChan chan int) {
     fmt.Println("New HookWorker goroutine is running!")
-    var oneEvent models.ChanElementStruct
     for {
         select {
-            case oneEvent = <-eventChan:
+            case oneEvent := <-eventChan:
                 if middleware_manager.Run(conf.Middlewares, oneEvent) == false {
                     fmt.Println(oneEvent, "事件处理失败！")
                 }
             case <-signalChan:
+                close(signalChan)
+                close(eventChan)
                 fmt.Println("Goroutine接收到退出信号！")
                 return
             default:
+                continue
         }
     }
 }
