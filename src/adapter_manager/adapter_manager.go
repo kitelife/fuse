@@ -12,7 +12,7 @@ type FilteredEventDataStruct struct {
 }
 
 type AdapterInterface interface {
-    Parse(*http.Request) (FilteredEventDataStruct)
+    Parse(*http.Request) (FilteredEventDataStruct, error)
 }
 
 var Adapters map[string]AdapterInterface = make(map[string]AdapterInterface)

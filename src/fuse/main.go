@@ -75,7 +75,12 @@ func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.P
         w.Write(genResponseStr("failure", "请求的URL错误！"))
         return
     }
-    filteredEventData := targetAdapter.Parse(req)
+    filteredEventData, err := targetAdapter.Parse(req)
+    if err != nil {
+        fmt.Println(err.Error())
+        w.Write(genResponseStr("failure", err.Error()))
+        return
+    }
     if reposRemoteURL == "" {
         reposRemoteURL = filteredEventData.ReposRemoteURL
     }

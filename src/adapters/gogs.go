@@ -45,6 +45,7 @@ package adapters
 
 import (
     "encoding/json"
+    "errors"
     "fmt"
     "net/http"
     "strings"
@@ -93,10 +94,10 @@ type GogsPushRequestBodyStruct struct {
     Compare_url     string
 }
 
-func (gogs GogsStruct) Parse(req *http.Request) (filteredEventData adapter_manager.FilteredEventDataStruct) {
+func (gogs GogsStruct) Parse(req *http.Request) (filteredEventData adapter_manager.FilteredEventDataStruct, err error) {
     var prbs GogsPushRequestBodyStruct
     eventDecoder := json.NewDecoder(req.Body)
-    err := eventDecoder.Decode(&prbs)
+    err = eventDecoder.Decode(&prbs)
     if err != nil {
         fmt.Println(err.Error())
         return
@@ -109,13 +110,13 @@ func (gogs GogsStruct) Parse(req *http.Request) (filteredEventData adapter_manag
     branchPartsLength := len(branchParts)
     if branchPartsLength == 0 {
         fmt.Println("请求内容中分支不正确！", prbs.Ref)
-        return
+        return filteredEventData, errors.New("请求内容中分支不正确！")
     }
 
     commitCount := len(prbs.Commits)
     if commitCount == 0 {
         fmt.Println("本次push事件中commit数目为0")
-        return
+        return filteredEventData, errors.New("本次push事件中commit数目为0")
     }
     // 这里的ReposRemoteURL是需要的远程仓库的地址么？
     filteredEventData = adapter_manager.FilteredEventDataStruct {
@@ -123,7 +124,7 @@ func (gogs GogsStruct) Parse(req *http.Request) (filteredEventData adapter_manag
         BranchName: branchParts[branchPartsLength-1],
         LatestCommit: prbs.Commits[commitCount-1].Id,
     }
-    return filteredEventData
+    return filteredEventData, nil
 }
 
 func init() {
