@@ -238,6 +238,7 @@ func HookWorker(eventChan chan models.ChanElementStruct, signalChan chan int) {
             case <-signalChan:
                 fmt.Println("Goroutine接收到退出信号！")
                 return
+            default:
         }
     }
 }
