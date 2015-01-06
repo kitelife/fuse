@@ -360,6 +360,7 @@ func (mh ModelHelper) GetReposChans()(rbcs ReposChanMap) {
 
     var reposID int
     for rows.Next() {
+        rows.Scan(&reposID)
         rbcs[reposID] = make(chan ChanElementStruct, 5)
     }
     return rbcs
