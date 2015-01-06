@@ -100,7 +100,7 @@ func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.P
     newEventData := models.ChanElementStruct {
         ReposID: reposID,
         HookID: targetHookID,
-        RemoteURL: remoteURL,
+        RemoteURL: reposRemoteURL,
         BranchName: branchName,
         LatestCommit: filteredEventData.LatestCommit,
         TargetDir: targetDir,
