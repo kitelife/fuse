@@ -36,7 +36,7 @@ $(function() {
             'type': 'post',
             'url': '/new/repos',
             'data': {
-                'repos_type': ID,
+                'repos_type': adapterID,
                 'repos_name': reposName,
                 'repos_remote': reposRemote
             },
