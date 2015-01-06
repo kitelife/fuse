@@ -244,10 +244,9 @@ func HookWorker(eventChan chan ChanElementStruct, signalChan chan int) {
 
 func RunWorkers() {
     for reposID, eventChan := range eventChannels {
-            newSignalChan := make(chan int)
-            signalChannels[reposID] = newSignalChan
-            go HookWorker(eventChan, newSignalChan)
-        }
+        newSignalChan := make(chan int)
+        signalChannels[reposID] = newSignalChan
+        go HookWorker(eventChan, newSignalChan)
     }
 }
 
