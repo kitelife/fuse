@@ -67,7 +67,7 @@ func (gls GitlabStruct) Parse(req *http.Request) (filteredEventData adapter_mana
         fmt.Println("本次push事件中commit数目为0")
         return
     }
-    filteredEventData := FilteredEventDataStruct {
+    filteredEventData = adapter_manager.FilteredEventDataStruct {
         ReposRemoteURL: prbs.Repository.Url,
         BranchName: branchParts[branchPartsLength-1],
         LatestCommit: prbs.Commits[commitCount-1].Id,

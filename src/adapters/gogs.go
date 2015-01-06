@@ -118,7 +118,7 @@ func (gogs GogsStruct) Parse(req *http.Request) (filteredEventData adapter_manag
         return
     }
     // 这里的ReposRemoteURL是需要的远程仓库的地址么？
-    filteredEventData = FilteredEventDataStruct {
+    filteredEventData = adapter_manager.FilteredEventDataStruct {
         ReposRemoteURL: prbs.Repository.Url,
         BranchName: branchParts[branchPartsLength-1],
         LatestCommit: prbs.Commits[commitCount-1].Id,

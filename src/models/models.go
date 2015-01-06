@@ -57,6 +57,7 @@ type ChanElementStruct struct {
     RemoteURL string
     BranchName string
     TargetDir string
+    LatestCommit string
     Mh ModelHelper
 }
 
