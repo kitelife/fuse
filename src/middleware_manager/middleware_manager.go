@@ -8,7 +8,7 @@ type MiddlewareInterface interface {
     Run(models.ChanElementStruct) (bool)
 }
 
-var Middlewares = map[string]MiddlewareInterface = make(map[string]MiddlewareInterface)
+var Middlewares = make(map[string]MiddlewareInterface)
 
 func MiddlewareRegister(id string, thisMiddleware MiddlewareInterface) bool {
     if _, ok := Middlewares[id]; ok == true {

@@ -7,6 +7,7 @@ import (
 
     "middleware_manager"
     "models"
+    "utils"
 )
 
 type PullReposStruct struct {
@@ -17,9 +18,9 @@ func (pr PullReposStruct) Run(chanElement models.ChanElementStruct) bool {
     isNew := false
     // 存入数据库时就已经是绝对路径了
     // absTargetPath, _ := filepath.Abs(targetDir)
-    if checkPathExist(chanElement.TargetDir) == false {
+    if utils.CheckPathExist(chanElement.TargetDir) == false {
         // 创建新目录可能会失败
-        if err = os.MkdirAll(chanElement.TargetDir, 0666); err != nil {
+        if err := os.MkdirAll(chanElement.TargetDir, 0666); err != nil {
             // 记录状态用于页面展示
             // 三种状态：error、failure、success
             // error 表示系统错误
@@ -34,14 +35,14 @@ func (pr PullReposStruct) Run(chanElement models.ChanElementStruct) bool {
     // 获取当前目录，用于切换回来
     pwd, _ := os.Getwd()
     // 切换当前目录到对应分支的代码目录
-    if err = os.Chdir(chanElement.TargetDir); err != nil {
+    if err := os.Chdir(chanElement.TargetDir); err != nil {
         chanElement.Mh.UpdateLogStatus(chanElement.HookID, "error", err.Error())
         fmt.Println(err.Error())
         return false
     }
 
     // 确保函数执行结束后能切换回原工作目录
-    defer ChangeDir(pwd)
+    defer utils.ChangeDir(pwd)
 
     if isNew {
         cloneCMD := exec.Command("git", "clone", chanElement.RemoteURL, ".")

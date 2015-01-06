@@ -57,7 +57,7 @@ type ChanElementStruct struct {
     RemoteURL string
     BranchName string
     TargetDir string
-    Mh models.ModelHelper
+    Mh ModelHelper
 }
 
 type ReposChanMap map[int]chan ChanElementStruct
@@ -133,7 +133,7 @@ func (mh ModelHelper) StoreNewHook(reposID int, whichBranch string, targetDir st
     insertResult, err := mh.Db.Exec(targetSQL, reposID, whichBranch, targetDir, hookStatus, logContent, updatedTime)
     if err != nil {
         fmt.Println(err.Error())
-        if rollbackErr = oneTrans.Rollback(); rollbackErr != nil {
+        if rollbackErr := oneTrans.Rollback(); rollbackErr != nil {
             fmt.Println(rollbackErr.Error())
         }
         return -1, err
@@ -141,7 +141,7 @@ func (mh ModelHelper) StoreNewHook(reposID int, whichBranch string, targetDir st
     newReposID, err := insertResult.LastInsertId()
     if err != nil {
         fmt.Println(err.Error())
-        if rollbackErr = oneTrans.Rollback(); rollbackErr != nil {
+        if rollbackErr := oneTrans.Rollback(); rollbackErr != nil {
             fmt.Println(rollbackErr.Error())
         }
     }
@@ -323,8 +323,9 @@ func (mh ModelHelper) UpdateLogStatus(hookID int, hookStatus string, logContent 
     targetSQL := "UPDATE hooks SET hook_status=?, log_content=?, updated_time=? WHERE hook_id=?"
     if _, err := mh.Db.Exec(targetSQL, hookStatus, logContent, now, hookID); err != nil {
         fmt.Println(err.Error())
+        return err
     }
-    return err
+    return nil
 }
 
 func (mh ModelHelper) GetReposChans()(rbcs ReposChanMap) {
@@ -333,7 +334,7 @@ func (mh ModelHelper) GetReposChans()(rbcs ReposChanMap) {
     if err != nil {
         return nil
     }
-    def rows.Close()
+    defer rows.Close()
 
     var reposID int
     for rows.Next() {

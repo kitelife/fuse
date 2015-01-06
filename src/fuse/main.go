@@ -42,19 +42,6 @@ func genResponseStr(status string, message string) []byte {
     return responseContent
 }
 
-func checkPathExist(path string) bool {
-    if _, e := os.Stat(path); os.IsNotExist(e) {
-        return false
-    }
-    return true
-}
-
-func ChangeDir(targetDir string) {
-    if err := os.Chdir(targetDir); err != nil {
-        fmt.Println(err.Error())
-    }
-}
-
 func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.Params) {
     w.Header().Set("Content-Type", "application/json")
 
