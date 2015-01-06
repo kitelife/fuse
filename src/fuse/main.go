@@ -18,21 +18,20 @@ import (
     "config"
     "adapter_manager"
     _ "adapters"
+    "middleware_manager"
+    _ "middlewares"
     "models"
 )
-
-type ChanElementStruct struct {
-    RemoteURL string
-    BranchName string
-}
-
-type BranchChanMap map[int]chan ChanElementStruct
-type ReposBranchChanMap map[int]BranchChanMap
 
 var masterAbsPath string
 var db *sql.DB
 var mh models.ModelHelper
 var conf config.ConfStruct
+
+// 带缓冲的事件数据管道
+var eventChannels models.ReposChanMap
+// 用来传递信号告知goroutine退出
+var signalChannels = make(map[int]chan int)
 
 func genResponseStr(status string, message string) []byte {
     resp := models.ResponseStruct{
@@ -48,12 +47,6 @@ func checkPathExist(path string) bool {
         return false
     }
     return true
-}
-
-func logHookStatus(hookID int, hookStatus string, logContent string) {
-    if dbErr := mh.UpdateLogStatus(hookID, hookStatus, logContent); dbErr != nil {
-        fmt.Println(dbErr.Error())
-    }
 }
 
 func ChangeDir(targetDir string) {
@@ -117,83 +110,19 @@ func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.P
     thatBranch2Hook, _ := reposBranch2Hook[reposID]
     targetHookID, _ := thatBranch2Hook[branchName]
 
-    isNew := false
-    // 存入数据库时就已经是绝对路径了
-    // absTargetPath, _ := filepath.Abs(targetDir)
-    if checkPathExist(targetDir) == false {
-        // 创建新目录可能会失败
-        if err = os.MkdirAll(targetDir, 0666); err != nil {
-            // 记录状态用于页面展示
-            // 三种状态：error、failure、success
-            // error 表示系统错误
-            // failure表示pull/clone出错
-            logHookStatus(targetHookID, "error", err.Error())
-            fmt.Println(err.Error())
-            w.Write(genResponseStr("Error", "系统错误！"))
-            return
-        }
-        isNew = true
+    newEventData := models.ChanElementStruct {
+        ReposID: reposID,
+        HookID: targetHookID,
+        RemoteURL: remoteURL,
+        BranchName: branchName,
+        TargetDir: targetDir,
+        Mh: mh,
     }
 
-    // 获取当前目录，用于切换回来
-    pwd, _ := os.Getwd()
-    // 切换当前目录到对应分支的代码目录
-    if err = os.Chdir(targetDir); err != nil {
-        logHookStatus(targetHookID, "error", err.Error())
-        fmt.Println(err.Error())
-        w.Write(genResponseStr("Error", "系统错误！"))
-        return
-    }
+    // 将事件数据传入管道
+    eventChannels[reposID][targetHookID] <- newEventData
 
-    // 确保函数执行结束后能切换回原工作目录
-    defer ChangeDir(pwd)
-
-    if isNew {
-        cloneCMD := exec.Command("git", "clone", reposRemoteURL, ".")
-        output, err := cloneCMD.Output()
-        if err != nil {
-            errMsg := fmt.Sprintf("%s; %s", string(output), err.Error())
-            logHookStatus(targetHookID, "failure", errMsg)
-            fmt.Println(errMsg)
-            w.Write(genResponseStr("failure", "克隆失败！"))
-            return
-        }
-    } else {
-        // 先清除可能存在的本地变更
-        cleanCMD := exec.Command("git", "checkout", "*")
-        output, err := cleanCMD.Output()
-        if err != nil {
-            errMsg := fmt.Sprintf("%s; %s", string(output), err.Error())
-            logHookStatus(targetHookID, "failure", errMsg)
-            fmt.Println(errMsg)
-            w.Write(genResponseStr("failure", "清除本地变更失败！"))
-            return
-        }
-    }
-
-    changeBranchCMD := exec.Command("git", "checkout", branchName)
-    output, err := changeBranchCMD.Output()
-    if err != nil {
-        errMsg := fmt.Sprintf("%s; %s", string(output), err.Error())
-        logHookStatus(targetHookID, "failure", errMsg)
-        fmt.Println(errMsg)
-        w.Write(genResponseStr("failure", "工作目录切换到目标分支失败！"))
-        return
-    }
-
-    // 然后pull
-    pullCmd := exec.Command("git", "pull", "-p")
-    output, err = pullCmd.Output()
-    if err != nil {
-        errMsg := fmt.Sprintf("%s; %s", string(output), err.Error())
-        logHookStatus(targetHookID, "failure", errMsg)
-        fmt.Println(errMsg)
-        w.Write(genResponseStr("failure", "Git Pull失败！"))
-        return
-    }
-
-    logHookStatus(targetHookID, "success", "自动更新成功！")
-    w.Write(genResponseStr("success", "自动更新成功！"))
+    w.Write(genResponseStr("success", "成功！"))
     return
 }
 
@@ -229,11 +158,16 @@ func newRepos(w http.ResponseWriter, req *http.Request) {
 
     reposRemote := req.FormValue("repos_remote")
 
-    err := mh.StoreNewRepos(reposType, reposName, reposRemote)
+    newReposID, err := mh.StoreNewRepos(reposType, reposName, reposRemote)
     if err != nil {
         w.Write(genResponseStr("failure", "新增代码库失败！"))
         return
     }
+    // 开启对应的goroutine和channel
+    eventChannels[newReposID] = make(chan models.ChanElementStruct, 5)
+    signalChannels[newReposID] = make(chan int)
+    go HookWorker(eventChannels[newReposID], signalChannels[newReposID])
+
     w.Write(genResponseStr("success", "成功添加新代码库记录！"))
     return
 }
@@ -270,6 +204,14 @@ func deleteRepos(w http.ResponseWriter, req *http.Request) {
         w.Write(genResponseStr("failure", "删除代码库记录失败！"))
         return
     }
+
+    // 关闭对应的goroutine和channel
+    signalChannels[reposID] <- 0
+    close(eventChannels[reposID])
+    close(signalChannels[reposID])
+    delete(eventChannels[reposID])
+    delete(signalChannels[reposID])
+
     w.Write(genResponseStr("success", "成功删除代码库记录"))
     return
 }
@@ -293,16 +235,33 @@ func deleteHook(w http.ResponseWriter, req *http.Request) {
         w.Write(genResponseStr("failure", "删除钩子失败！"))
         return
     }
+
     w.Write(genResponseStr("success", "成功删除钩子"))
     return
 }
 
-func HookWorker(oneChan chan ChanElementStruct) {
-
+func HookWorker(eventChan chan ChanElementStruct, signalChan chan int) {
+    var oneEvent ChanElementStruct
+    for {
+        select {
+            case oneEvent = <-eventChan:
+                if middleware_manager.Run(conf.Middlewares, oneEvent) == false {
+                    fmt.Println(oneEvent, "事件处理失败！")
+                }
+            case <-signalChan:
+                fmt.Println("Goroutine接收到退出信号！")
+                return
+        }
+    }
 }
 
-func RunWorkers(chans ReposBranchChanMap) {
-
+func RunWorkers() {
+    for reposID, eventChan := range eventChannels {
+            newSignalChan := make(chan int)
+            signalChannels[reposID] = newSignalChan
+            go HookWorker(eventChan, newSignalChan)
+        }
+    }
 }
 
 func main() {
@@ -326,6 +285,10 @@ func main() {
         fmt.Println("数据库操作失败！", err.Error())
         return
     }
+
+    //
+    eventChannels = mh.GetReposChans()
+    RunWorkers()
 
     m := martini.Classic()
 

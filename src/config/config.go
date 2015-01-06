@@ -9,6 +9,7 @@ import (
 
 type ConfStruct struct {
     Host string
+    Middlewares []string
 }
 
 // 该辅助函数来自golang标准库io/ioutil/ioutil.go

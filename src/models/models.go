@@ -51,6 +51,17 @@ type HomePageDataStruct struct {
     DBRelatedData []DBRelatedDataStruct
 }
 
+type ChanElementStruct struct {
+    ReposID int
+    HookID int
+    RemoteURL string
+    BranchName string
+    TargetDir string
+    Mh models.ModelHelper
+}
+
+type ReposChanMap map[int]chan ChanElementStruct
+
 func (mh ModelHelper) InitDB() (err error) {
     // 如果目标数据表还不存在则创建
     tableRepos := `CREATE TABLE IF NOT EXISTS repos (
@@ -110,14 +121,35 @@ func (mh ModelHelper) StoreNewRepos(reposType string, reposName string, reposRem
 }
 
 // mh.StoreNewHook(reposID, whichBranch, targetDir, updatedTime)
-func (mh ModelHelper) StoreNewHook(reposID int, whichBranch string, targetDir string, updatedTime string) error {
+func (mh ModelHelper) StoreNewHook(reposID int, whichBranch string, targetDir string, updatedTime string) (int, error) {
     hookStatus := "ready"
     logContent := ""
     targetSQL := "INSERT INTO hooks (repos_id, which_branch, target_dir, hook_status, log_content, updated_time) VALUES (?, ?, ?, ?, ?, ?)"
-    if _, err := mh.Db.Exec(targetSQL, reposID, whichBranch, targetDir, hookStatus, logContent, updatedTime); err != nil {
-        return err
+    oneTrans, err := mh.Db.Begin()
+    if err != nil {
+        fmt.Println(err.Error())
+        return -1, err
     }
-    return nil
+    insertResult, err := mh.Db.Exec(targetSQL, reposID, whichBranch, targetDir, hookStatus, logContent, updatedTime)
+    if err != nil {
+        fmt.Println(err.Error())
+        if rollbackErr = oneTrans.Rollback(); rollbackErr != nil {
+            fmt.Println(rollbackErr.Error())
+        }
+        return -1, err
+    }
+    newReposID, err := insertResult.LastInsertId()
+    if err != nil {
+        fmt.Println(err.Error())
+        if rollbackErr = oneTrans.Rollback(); rollbackErr != nil {
+            fmt.Println(rollbackErr.Error())
+        }
+    }
+    if err := oneTrans.Commit(); err != nil {
+        fmt.Println(err.Error())
+        return -1, err
+    }
+    return int(newReposID), nil
 }
 
 func (mh ModelHelper) QueryDBForHookHandler() (map[int]ReposStruct, map[int]Branch2DirMap, map[int]Branch2HookMap) {
@@ -218,7 +250,7 @@ func (mh ModelHelper) QueryDBForViewHome()(reposList map[int]string, dbRelatedDa
     return reposList, dbRelatedData
 }
 
-func (mh ModelHelper) CheckReposIDExist (reposID int) (bool, error) {
+func (mh ModelHelper) CheckReposIDExist(reposID int) (bool, error) {
     targetSQL := "SELECT COUNT(*) FROM repos WHERE repos_id=?"
     rows, err := mh.Db.Query(targetSQL, reposID)
     if err != nil {
@@ -252,7 +284,7 @@ func (mh ModelHelper) DeleteHook(hookID int) error {
     return nil
 }
 
-func (mh ModelHelper) CheckReposHasHook (reposID int) (bool, error) {
+func (mh ModelHelper) CheckReposHasHook(reposID int) (bool, error) {
     targetSQL := "SELECT COUNT(*) FROM hooks WHERE repos_id=?"
     rows, err := mh.Db.Query(targetSQL, reposID)
     if err != nil {
@@ -271,7 +303,7 @@ func (mh ModelHelper) CheckReposHasHook (reposID int) (bool, error) {
     return false, nil
 }
 
-func (mh ModelHelper) GetHookTargetDir (hookID int) (string, error) {
+func (mh ModelHelper) GetHookTargetDir(hookID int) (string, error) {
     targetSQL := "SELECT target_dir FROM hooks WHERE hook_id=?"
     rows, err := mh.Db.Query(targetSQL, hookID)
     if err != nil {
@@ -289,6 +321,23 @@ func (mh ModelHelper) GetHookTargetDir (hookID int) (string, error) {
 func (mh ModelHelper) UpdateLogStatus(hookID int, hookStatus string, logContent string) error {
     now := time.Now().UTC().Format("2006-01-02 15:04:05")
     targetSQL := "UPDATE hooks SET hook_status=?, log_content=?, updated_time=? WHERE hook_id=?"
-    _, err := mh.Db.Exec(targetSQL, hookStatus, logContent, now, hookID)
+    if _, err := mh.Db.Exec(targetSQL, hookStatus, logContent, now, hookID); err != nil {
+        fmt.Println(err.Error())
+    }
     return err
+}
+
+func (mh ModelHelper) GetReposChans()(rbcs ReposChanMap) {
+    reposSQL := "SELECT repos_id FROM repos"
+    rows, err := mh.Db.Query(reposSQL)
+    if err != nil {
+        return nil
+    }
+    def rows.Close()
+
+    var reposID int
+    for rows.Next() {
+        rbcs[reposID] = make(chan ChanElementStruct, 5)
+    }
+    return rbcs
 }
