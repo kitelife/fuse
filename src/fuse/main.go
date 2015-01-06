@@ -231,6 +231,7 @@ func HookWorker(eventChan chan models.ChanElementStruct, signalChan chan int) {
     for {
         select {
             case oneEvent := <-eventChan:
+                fmt.Println("收到事件，", oneEvent)
                 if middleware_manager.Run(conf.Middlewares, oneEvent) == false {
                     fmt.Println(oneEvent, "事件处理失败！")
                 }
@@ -246,10 +247,9 @@ func HookWorker(eventChan chan models.ChanElementStruct, signalChan chan int) {
 }
 
 func RunWorkers() {
-    for reposID, eventChan := range eventChannels {
-        newSignalChan := make(chan int)
-        signalChannels[reposID] = newSignalChan
-        go HookWorker(eventChan, newSignalChan)
+    for reposID, _ := range eventChannels {
+        signalChannels[reposID] = make(chan int)
+        go HookWorker(eventChannels[reposID], signalChannels[reposID])
     }
 }
 
