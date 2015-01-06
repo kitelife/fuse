@@ -349,6 +349,7 @@ func (mh ModelHelper) UpdateLogStatus(hookID int, hookStatus string, logContent 
 }
 
 func (mh ModelHelper) GetReposChans()(rbcs ReposChanMap) {
+    rbcs = make(ReposChanMap)
     reposSQL := "SELECT repos_id FROM repos"
     rows, err := mh.Db.Query(reposSQL)
     if err != nil {
