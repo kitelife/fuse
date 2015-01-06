@@ -75,14 +75,24 @@ func (pr PullReposStruct) Run(chanElement models.ChanElementStruct) bool {
     }
 
     if isNew == false {
-        pullCmd := exec.Command("git", "pull", "-p")
-        output, err = pullCmd.Output()
+        pullCMD := exec.Command("git", "pull", "-p")
+        output, err = pullCMD.Output()
         if err != nil {
             errMsg := fmt.Sprintf("%s; %s", string(output), err.Error())
             chanElement.Mh.UpdateLogStatus(chanElement.HookID, "failure", errMsg)
             fmt.Println(errMsg)
             return false
         }
+
+        resetHardCMD := exec.Command("git", "reset", "--hard", chanElement.LatestCommit)
+        output, err = resetHardCMD.Output()
+        if err != nil {
+            errMsg := fmt.Sprintf("%s; %s", string(output), err.Error())
+            chanElement.Mh.UpdateLogStatus(chanElement.HookID, "failure", errMsg)
+            fmt.Println(errMsg)
+            return false
+        }
+
     }
     chanElement.Mh.UpdateLogStatus(chanElement.HookID, "success", "成功拉取代码库！")
     return true

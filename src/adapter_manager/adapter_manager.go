@@ -5,8 +5,14 @@ import (
     "net/http"
 )
 
+type FilteredEventDataStruct struct {
+    ReposRemoteURL string
+    BranchName string
+    LatestCommit string
+}
+
 type AdapterInterface interface {
-    Parse(*http.Request) (string, string)
+    Parse(*http.Request) (FilteredEventDataStruct)
 }
 
 var Adapters map[string]AdapterInterface = make(map[string]AdapterInterface)

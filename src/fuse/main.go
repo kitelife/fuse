@@ -75,10 +75,11 @@ func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.P
         w.Write(genResponseStr("failure", "请求的URL错误！"))
         return
     }
-    remoteURL, branchName := targetAdapter.Parse(req)
+    filteredEventData := targetAdapter.Parse(req)
     if reposRemoteURL == "" {
-        reposRemoteURL = remoteURL
+        reposRemoteURL = filteredEventData.ReposRemoteURL
     }
+    branchName := filteredEventData.BranchName
 
     thatBranch2Dir, ok := reposBranch2Dir[reposID]
     if ok == false {
@@ -101,6 +102,7 @@ func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.P
         HookID: targetHookID,
         RemoteURL: remoteURL,
         BranchName: branchName,
+        LatestCommit: filteredEventData.LatestCommit,
         TargetDir: targetDir,
         Mh: mh,
     }

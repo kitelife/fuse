@@ -43,12 +43,13 @@ type GitlabStruct struct {
     id string
 }
 
-func (gls GitlabStruct) Parse(req *http.Request) (reposRemoteURL string, branchName string) {
+func (gls GitlabStruct) Parse(req *http.Request) (adapter_manager.FilteredEventDataStruct) {
     var prbs GitlabPushRequestBodyStruct
     eventDecoder := json.NewDecoder(req.Body)
     err := eventDecoder.Decode(&prbs)
     if err != nil {
-        return "", ""
+        fmt.Println(err.Error())
+        return nil
     }
     // 记录日志
     // reqBodyStr, _ := json.MarshalIndent(prb, "", "    ")
@@ -58,12 +59,20 @@ func (gls GitlabStruct) Parse(req *http.Request) (reposRemoteURL string, branchN
     branchPartsLength := len(branchParts)
     if branchPartsLength == 0 {
         fmt.Println("请求内容中分支不正确！", prbs.Ref)
-        return "", ""
+        return nil
     }
 
-    branchName = branchParts[branchPartsLength-1]
-    reposRemoteURL = prbs.Repository.Url
-    return reposRemoteURL, branchName
+    commitCount := len(prbs.Commits)
+    if commitCount == 0 {
+        fmt.Println("本次push事件中commit数目为0")
+        return nil
+    }
+    filteredEventData := FilteredEventDataStruct {
+        ReposRemoteURL: prbs.Repository.Url,
+        BranchName: branchParts[branchPartsLength-1],
+        LatestCommit: prbs.Commits[commitCount-1].Id,
+    }
+    return filteredEventData
 }
 
 func init() {

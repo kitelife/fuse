@@ -154,12 +154,13 @@ type GithubPushRequestBodyStruct struct {
     Sender GithubSenderInfoStruct
 }
 
-func (github GithubStruct) Parse(req *http.Request) (reposRemoteURL string, branchName string) {
+func (github GithubStruct) Parse(req *http.Request) (adapter_manager.FilteredEventDataStruct) {
     var prbs GithubPushRequestBodyStruct
     eventDecoder := json.NewDecoder(req.Body)
     err := eventDecoder.Decode(&prbs)
     if err != nil {
-        return "", ""
+        fmt.Println(err.Error())
+        return nil
     }
     // 记录日志
     // reqBodyStr, _ := json.MarshalIndent(prb, "", "    ")
@@ -169,13 +170,21 @@ func (github GithubStruct) Parse(req *http.Request) (reposRemoteURL string, bran
     branchPartsLength := len(branchParts)
     if branchPartsLength == 0 {
         fmt.Println("请求内容中分支不正确！", prbs.Ref)
-        return "", ""
+        return nil
     }
 
-    branchName = branchParts[branchPartsLength-1]
-    reposRemoteURL = prbs.Repository.Git_url
-    // 这里的reposRemoteURL是需要的远程仓库的地址么？
-    return reposRemoteURL, branchName
+    commitCount := len(prbs.Commits)
+    if commitCount == 0 {
+        fmt.Println("本次push事件中commit数目为0")
+        return nil
+    }
+    // 这里的ReposRemoteURL是需要的远程仓库的地址么？
+    filteredEventData := FilteredEventDataStruct {
+        ReposRemoteURL: prbs.Repository.Git_url,
+        BranchName: branchParts[branchPartsLength-1],
+        LatestCommit: prbs.Commits[commitCount-1].Id,
+    }
+    return filteredEventData
 }
 
 func init() {
