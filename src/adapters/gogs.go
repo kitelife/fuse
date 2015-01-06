@@ -1,4 +1,4 @@
-package plugins
+package adapters
 
 // 待测试
 
@@ -48,7 +48,7 @@ import (
     "fmt"
     "net/http"
     "strings"
-    "plugin_manager"
+    "adapter_manager"
 )
 
 type GogsStruct struct {
@@ -119,5 +119,5 @@ func (gogs GogsStruct) Parse(req *http.Request) (reposRemoteURL string, branchNa
 
 func init() {
     gogs := GogsStruct{id: "gogs"}
-    plugin_manager.PluginRegister("gogs", gogs)
+    adapter_manager.AdapterRegister("gogs", gogs)
 }

@@ -1,4 +1,4 @@
-package plugins
+package adapters
 
 // 待测试
 
@@ -9,7 +9,7 @@ import (
     "fmt"
     "net/http"
     "strings"
-    "plugin_manager"
+    "adapter_manager"
 )
 
 type GithubStruct struct {
@@ -180,5 +180,5 @@ func (github GithubStruct) Parse(req *http.Request) (reposRemoteURL string, bran
 
 func init() {
     github := GithubStruct{id: "github"}
-    plugin_manager.PluginRegister("github", github)
+    adapter_manager.AdapterRegister("github", github)
 }

@@ -46,7 +46,7 @@ type DBRelatedDataStruct struct {
 }
 
 type HomePageDataStruct struct {
-    PluginIDList []string
+    AdapterIDList []string
     ReposList map[int]string
     DBRelatedData []DBRelatedDataStruct
 }

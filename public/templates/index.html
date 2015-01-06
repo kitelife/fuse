@@ -92,10 +92,10 @@
                     </div>
                     <div class="modal-body">
                         <div class="form-group">
-                            <select class="form-control select select-primary" data-toggle="select" id="select_plugin">
+                            <select class="form-control select select-primary" data-toggle="select" id="select_adapter">
                                 <option value="">选择类型</option>
-                                {{ range $index, $pluginID := .PluginIDList}}
-                                <option value="{{ $pluginID }}">{{ $pluginID }}</option>
+                                {{ range $index, $adapterID := .AdapterIDList}}
+                                <option value="{{ $adapterID }}">{{ $adapterID }}</option>
                                 {{ end }}
                             </select>
                         </div>

@@ -1,11 +1,11 @@
-package plugins
+package adapters
 
 import (
     "encoding/json"
     "fmt"
     "net/http"
     "strings"
-    "plugin_manager"
+    "adapter_manager"
 )
 
 type GitlabReposInfoStruct struct {
@@ -68,5 +68,5 @@ func (gls GitlabStruct) Parse(req *http.Request) (reposRemoteURL string, branchN
 
 func init() {
     gls := GitlabStruct{id: "gitlab"}
-    plugin_manager.PluginRegister("gitlab", gls)
+    adapter_manager.AdapterRegister("gitlab", gls)
 }

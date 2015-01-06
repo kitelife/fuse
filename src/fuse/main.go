@@ -16,8 +16,8 @@ import (
     _ "github.com/mattn/go-sqlite3"
 
     "config"
-    "plugin_manager"
-    _ "plugins"
+    "adapter_manager"
+    _ "adapters"
     "models"
 )
 
@@ -82,21 +82,21 @@ func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.P
     }
     reposRemoteURL := targetRepos.ReposRemote
 
-    pluginID := params["plugin_id"]
+    adapterID := params["adapter_id"]
     // 先检测请求URL中的仓库类型与目标仓库配置的类型是否一致
-    if targetRepos.ReposType != pluginID {
+    if targetRepos.ReposType != adapterID {
         fmt.Println("仓库类型不匹配！")
         w.Write(genResponseStr("failure", "请求的URL错误！"))
         return
     }
     // 根据请求中指定的插件ID，加载对应的插件
-    targetPlugin := plugin_manager.Dispatch(pluginID)
-    if targetPlugin == nil {
-        fmt.Println("不存在指定的插件", pluginID)
+    targetAdapter := adapter_manager.Dispatch(adapterID)
+    if targetAdapter == nil {
+        fmt.Println("不存在指定的适配器", adapterID)
         w.Write(genResponseStr("failure", "请求的URL错误！"))
         return
     }
-    remoteURL, branchName := targetPlugin.Parse(req)
+    remoteURL, branchName := targetAdapter.Parse(req)
     if reposRemoteURL == "" {
         reposRemoteURL = remoteURL
     }
@@ -198,7 +198,7 @@ func hookEventHandler(w http.ResponseWriter, req *http.Request, params martini.P
 }
 
 func viewHome(w http.ResponseWriter, req *http.Request) {
-    pluginIDList := plugin_manager.ListPluginID()
+    adapterIDList := adapter_manager.ListAdapterID()
     reposList, dbRelatedData := mh.QueryDBForViewHome()
 
     t, err := template.ParseFiles("./public/templates/index.html")
@@ -206,7 +206,7 @@ func viewHome(w http.ResponseWriter, req *http.Request) {
         fmt.Println(err)
         return
     }
-    _ = t.Execute(w, models.HomePageDataStruct{PluginIDList: pluginIDList, ReposList: reposList, DBRelatedData: dbRelatedData})
+    _ = t.Execute(w, models.HomePageDataStruct{AdapterIDList: adapterIDList, ReposList: reposList, DBRelatedData: dbRelatedData})
     return
 }
 
@@ -222,7 +222,7 @@ func newRepos(w http.ResponseWriter, req *http.Request) {
 
     reposType := req.FormValue("repos_type")
 
-    if plugin_manager.HasThisPlugin(reposType) == false {
+    if adapter_manager.HasThisAdapter(reposType) == false {
         w.Write(genResponseStr("failure", "不存在对应的代码库类型！"))
         return
     }
@@ -302,7 +302,7 @@ func HookWorker(oneChan chan ChanElementStruct) {
 }
 
 func RunWorkers(chans ReposBranchChanMap) {
-    
+
 }
 
 func main() {
@@ -335,7 +335,7 @@ func main() {
     m.Post("/delete/repos", deleteRepos)
     m.Post("/delete/hook", deleteHook)
 
-    m.Post("/webhook/(?P<plugin_id>[a-zA-Z]+)/(?P<repos_id>[0-9]+)", hookEventHandler)
+    m.Post("/webhook/(?P<adapter_id>[a-zA-Z]+)/(?P<repos_id>[0-9]+)", hookEventHandler)
 
     m.RunOnAddr(":8788")
 }

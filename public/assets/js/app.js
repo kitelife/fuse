@@ -23,11 +23,11 @@ $(function() {
     $('#button_new_repos').on('click', function(e) {
         e.preventDefault();
 
-        var pluginID = $('#select_plugin > option:selected').val(),
+        var adapterID = $('#select_adapter > option:selected').val(),
             reposName = $('input[name="repos_name"]').val(),
             reposRemote = $('input[name="repos_remote"]').val();
 
-        if (pluginID === '' || reposName === '') {
+        if (adapterID === '' || reposName === '') {
             alertify.log('类型和仓库名称均不能为空！', 'error', 5000);
             return;
         }
@@ -36,7 +36,7 @@ $(function() {
             'type': 'post',
             'url': '/new/repos',
             'data': {
-                'repos_type': pluginID,
+                'repos_type': ID,
                 'repos_name': reposName,
                 'repos_remote': reposRemote
             },
