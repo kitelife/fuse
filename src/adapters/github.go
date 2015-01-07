@@ -176,7 +176,6 @@ func (github GithubStruct) Parse(req *http.Request) (filteredEventData adapter_m
 
     commitCount := len(prbs.Commits)
     if commitCount == 0 {
-        fmt.Println("本次push事件中commit数目为0")
         return filteredEventData, errors.New("本次push事件中commit数目为0")
     }
     // 这里的ReposRemoteURL是需要的远程仓库的地址么？
