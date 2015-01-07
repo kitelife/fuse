@@ -271,12 +271,7 @@ func (mh ModelHelper) QueryDBForViewHome()(reposList map[int]string, dbRelatedDa
 
         targetWebHookURL = fmt.Sprintf("%s:%s/webhook/%s/%d", mh.Conf.Host, mh.Conf.Port, reposType, reposID)
 
-        dbRelatedData = append(dbRelatedData,
-            DBRelatedDataStruct{
-                ReposStruct{reposID, reposName, reposRemote, reposType, targetWebHookURL},
-                hooks[reposID],
-            }
-        )
+        dbRelatedData = append(dbRelatedData, DBRelatedDataStruct{ReposStruct{reposID, reposName, reposRemote, reposType, targetWebHookURL}, hooks[reposID]})
         reposList[reposID] = reposName
     }
     return reposList, dbRelatedData
