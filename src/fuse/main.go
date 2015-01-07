@@ -246,7 +246,8 @@ func HookWorker(eventChan chan models.ChanElementStruct, signalChan chan int) {
                 fmt.Println("Goroutine接收到退出信号！")
                 return
             default:
-                continue
+                //
+                time.Sleep(100 * time.Millisecond)
         }
     }
 }
