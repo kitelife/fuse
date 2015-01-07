@@ -198,11 +198,15 @@ func (mh ModelHelper) QueryDBForHookHandler() (map[int]ReposStruct, map[int]Bran
     var reposName string
     var reposRemote string
     var reposType string
+    var targetWebHookURL string
     for reposRows.Next() {
         reposRows.Scan(&reposID, &reposName, &reposRemote, &reposType)
+
+        targetWebHookURL = fmt.Sprintf("%s:%s/webhook/%s/%d", mh.Conf.Host, mh.Conf.Port, reposType, reposID)
+
         reposAll[reposID] = ReposStruct{ReposID: reposID, ReposName: reposName,
             ReposRemote: reposRemote, ReposType: reposType,
-            WebHookURL: mh.Conf.Host + "/webhook/" + reposType + "/" + strconv.Itoa(reposID),
+            WebHookURL: targetWebHookURL,
         }
     }
 
@@ -261,11 +265,18 @@ func (mh ModelHelper) QueryDBForViewHome()(reposList map[int]string, dbRelatedDa
     var reposName string
     var reposRemote string
     var reposType string
+    var targetWebHookURL string
     for reposRows.Next() {
         reposRows.Scan(&reposID, &reposName, &reposRemote, &reposType)
-        dbRelatedData = append(dbRelatedData, DBRelatedDataStruct{ReposStruct{reposID, reposName,
-            reposRemote, reposType, mh.Conf.Host + "/webhook/" + reposType + "/" + strconv.Itoa(reposID)}, hooks[reposID],
-        })
+
+        targetWebHookURL = fmt.Sprintf("%s:%s/webhook/%s/%d", mh.Conf.Host, mh.Conf.Port, reposType, reposID)
+
+        dbRelatedData = append(dbRelatedData,
+            DBRelatedDataStruct{
+                ReposStruct{reposID, reposName, reposRemote, reposType, targetWebHookURL},
+                hooks[reposID],
+            }
+        )
         reposList[reposID] = reposName
     }
     return reposList, dbRelatedData
@@ -361,7 +372,7 @@ func (mh ModelHelper) GetReposChans()(rbcs ReposChanMap) {
     var reposID int
     for rows.Next() {
         rows.Scan(&reposID)
-        rbcs[reposID] = make(chan ChanElementStruct, 5)
+        rbcs[reposID] = make(chan ChanElementStruct, mh.Conf.Queue_length)
     }
     return rbcs
 }

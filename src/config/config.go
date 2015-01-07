@@ -9,6 +9,8 @@ import (
 
 type ConfStruct struct {
     Host string
+    Port string
+    Queue_length int
     Middlewares []string
 }
 

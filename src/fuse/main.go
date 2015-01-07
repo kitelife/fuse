@@ -157,7 +157,7 @@ func newRepos(w http.ResponseWriter, req *http.Request) {
         return
     }
     // 开启对应的goroutine和channel
-    eventChannels[newReposID] = make(chan models.ChanElementStruct, 5)
+    eventChannels[newReposID] = make(chan models.ChanElementStruct, conf.Queue_length)
     signalChannels[newReposID] = make(chan int)
     go HookWorker(eventChannels[newReposID], signalChannels[newReposID])
 
@@ -294,5 +294,5 @@ func main() {
 
     m.Post("/webhook/(?P<adapter_id>[a-zA-Z]+)/(?P<repos_id>[0-9]+)", hookEventHandler)
 
-    m.RunOnAddr(":8788")
+    m.RunOnAddr(fmt.Sprintf(":%s", conf.Port))
 }
