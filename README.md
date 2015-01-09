@@ -21,7 +21,7 @@ fuse是一个针对webhook的HTTP API实现，可以适配Github、Gitlab、Gogs
 
 1. `git clone git@github.com:youngsterxyf/fuse.git`
 2. `cd fuse`，编辑修改根目录下的`.env`文件，并执行`source .env`
-3. 安装依赖组件：`go get github.com/go-martini/martini` ，`go get github.com/mattn/go-sqlite3`
+3. 安装依赖组件：`go get github.com/go-martini/martini`，`go get github.com/martini-contrib/auth`，`go get github.com/mattn/go-sqlite3`
 4. 编译源码：`go install fuse`
 5. 编辑`conf/app.json`文件，修改配置
 6. 运行程序：`bin/fuse`

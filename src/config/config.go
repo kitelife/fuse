@@ -7,11 +7,18 @@ import (
     "os"
 )
 
+type AuthInfoStruct struct {
+    Use bool
+    Username string
+    Password string
+}
+
 type ConfStruct struct {
     Host string
     Port string
     Queue_length int
     Middlewares []string
+    Auth AuthInfoStruct
 }
 
 // 该辅助函数来自golang标准库io/ioutil/ioutil.go

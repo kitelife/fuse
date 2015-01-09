@@ -4,5 +4,10 @@
     "queue_length": 5,
     "middlewares": [
         "pull_repos"
-    ]
+    ],
+    "auth": {
+        "use": true,
+        "username": "test",
+        "password": "test"
+    }
 }

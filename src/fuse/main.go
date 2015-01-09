@@ -12,6 +12,7 @@ import (
     "time"
 
     "github.com/go-martini/martini"
+    "github.com/martini-contrib/auth"
     _ "github.com/mattn/go-sqlite3"
 
     "config"
@@ -286,6 +287,10 @@ func main() {
     RunWorkers()
 
     m := martini.Classic()
+
+    if conf.Auth.Use {
+        m.Use(auth.Basic(conf.Auth.Username, conf.Auth.Password))
+    }
 
     m.Get("/", viewHome)
     m.Post("/new/repos", newRepos)
