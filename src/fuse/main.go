@@ -23,7 +23,7 @@ import (
     "models"
 )
 
-var masterAbsPath string
+var runTimeBasePath string
 var db *sql.DB
 var mh models.ModelHelper
 var conf config.ConfStruct
@@ -124,7 +124,7 @@ func viewHome(w http.ResponseWriter, req *http.Request) {
     adapterIDList := adapter_manager.ListAdapterID()
     reposList, dbRelatedData := mh.QueryDBForViewHome()
 
-    t, err := template.ParseFiles("./public/templates/index.html")
+    t, err := template.ParseFiles(filepath.Join(runTimeBasePath, "public/templates/index.html"))
     if err != nil {
         fmt.Println(err)
         return
@@ -269,7 +269,14 @@ func withAuthOrNot() (authHandler martini.Handler) {
 
 func main() {
     var err error
-    db, err = sql.Open("sqlite3", "./data.db")
+
+    runTimeBasePath, err = os.Getwd()
+    if err != nil {
+        fmt.Println("获取当前路径失败！", err.Error())
+        return
+    }
+
+    db, err = sql.Open("sqlite3", filepath.Join(runTimeBasePath, "data.db"))
     if err != nil {
         fmt.Println("数据库打开失败！", err.Error())
         return
@@ -295,7 +302,10 @@ func main() {
 
     m := martini.Classic()
 
-    m.Get("/", viewHome, withAuthOrNot())
+    // 静态文件
+    m.Use(martini.Static(filepath.Join(runTimeBasePath, 'public')))
+
+    m.Get("/", withAuthOrNot(), viewHome)
     m.Group("/new", func(r martini.Router) {
         r.Post("/repos", newRepos)
         r.Post("/hook", newHook)
