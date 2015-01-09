@@ -35,6 +35,7 @@ func (pr PullReposStruct) Run(chanElement models.ChanElementStruct) bool {
     // 获取当前目录，用于切换回来
     pwd, _ := os.Getwd()
     // 切换当前目录到对应分支的代码目录
+    // 对于目录的切换，在goroutine运行在多线程的情况下可能会有问题
     if err := os.Chdir(chanElement.TargetDir); err != nil {
         chanElement.Mh.UpdateLogStatus(chanElement.HookID, "error", err.Error())
         fmt.Println(err.Error())
