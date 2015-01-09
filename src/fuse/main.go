@@ -303,7 +303,7 @@ func main() {
     m := martini.Classic()
 
     // 静态文件
-    m.Use(martini.Static(filepath.Join(runTimeBasePath, 'public')))
+    m.Use(martini.Static(filepath.Join(runTimeBasePath, "public")))
 
     m.Get("/", withAuthOrNot(), viewHome)
     m.Group("/new", func(r martini.Router) {
