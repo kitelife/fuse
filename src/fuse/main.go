@@ -260,6 +260,13 @@ func RunWorkers() {
     }
 }
 
+func withAuthOrNot() (authHandler martini.Handler) {
+    if conf.Auth.Use {
+        return auth.Basic(conf.Auth.Username, conf.Auth.Password)
+    }
+    return
+}
+
 func main() {
     var err error
     db, err = sql.Open("sqlite3", "./data.db")
@@ -288,15 +295,15 @@ func main() {
 
     m := martini.Classic()
 
-    if conf.Auth.Use {
-        m.Use(auth.Basic(conf.Auth.Username, conf.Auth.Password))
-    }
-
-    m.Get("/", viewHome)
-    m.Post("/new/repos", newRepos)
-    m.Post("/new/hook", newHook)
-    m.Post("/delete/repos", deleteRepos)
-    m.Post("/delete/hook", deleteHook)
+    m.Get("/", viewHome, withAuthOrNot())
+    m.Group("/new", func(r martini.Router) {
+        r.Post("/repos", newRepos)
+        r.Post("/hook", newHook)
+    }, withAuthOrNot())
+    m.Group("/delete", func(r martini.Router) {
+        r.Post("/repos", deleteRepos)
+        r.Post("/hook", deleteHook)
+    }, withAuthOrNot())
 
     m.Post("/webhook/(?P<adapter_id>[a-zA-Z]+)/(?P<repos_id>[0-9]+)", hookEventHandler)
 
