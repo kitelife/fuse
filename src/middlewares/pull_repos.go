@@ -4,6 +4,7 @@ import (
     "fmt"
     "os"
     "os/exec"
+    "syscall"
 
     "middleware_manager"
     "models"
@@ -19,8 +20,10 @@ func (pr PullReposStruct) Run(chanElement models.ChanElementStruct) bool {
     // 存入数据库时就已经是绝对路径了
     // absTargetPath, _ := filepath.Abs(targetDir)
     if utils.CheckPathExist(chanElement.TargetDir) == false {
+        mask := syscall.Umask(0)
+        defer syscall.Umask(mask)
         // 创建新目录可能会失败
-        if err := os.MkdirAll(chanElement.TargetDir, 0666); err != nil {
+        if err := os.MkdirAll(chanElement.TargetDir, 0655); err != nil {
             // 记录状态用于页面展示
             // 三种状态：error、failure、success
             // error 表示系统错误
