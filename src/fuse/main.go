@@ -230,6 +230,31 @@ func deleteHook(w http.ResponseWriter, req *http.Request) {
 	return
 }
 
+func updateHook(w http.ResponseWriter, req *http.Request) {
+	hookID, _ := strconv.Atoi(req.FormValue("hook_id"))
+	branchName := req.FormValue("branch_name")
+	targetDir := req.FormValue("target_dir")
+
+	if exist, _ := mh.CheckHookIDExist(hookID); exist == false {
+		w.Write(genResponseStr("failure", "不存在目标Hook"))
+		return
+	}
+	targetDir, _ = filepath.Abs(targetDir)
+	/*
+	if utils.CheckPathExist(targetDir) == false {
+		w.Write(genResponseStr("failure", "不存在目标目录"))
+		return
+	}
+	*/
+
+	if err := mh.UpdateHook(hookID, branchName, targetDir); err != nil {
+		w.Write(genResponseStr("failure", err.Error()))
+		return;
+	}
+	w.Write(genResponseStr("success", "成功更新钩子"))
+	return
+}
+
 func HookWorker(eventChan chan models.ChanElementStruct, signalChan chan int) {
 	fmt.Println("New HookWorker goroutine is running!")
 	for {
@@ -311,6 +336,9 @@ func main() {
 	m.Group("/delete", func(r martini.Router) {
 		r.Post("/repos", deleteRepos)
 		r.Post("/hook", deleteHook)
+	}, withAuthOrNot())
+	m.Group("/update", func(r martini.Router) {
+		r.Post("/hook", updateHook)
 	}, withAuthOrNot())
 
 	m.Post("/webhook/(?P<adapter_id>[a-zA-Z]+)/(?P<repos_id>[0-9]+)", hookEventHandler)

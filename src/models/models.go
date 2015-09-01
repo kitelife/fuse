@@ -369,3 +369,33 @@ func (mh ModelHelper) GetReposChans() (rbcs ReposChanMap) {
 	}
 	return rbcs
 }
+
+func (mh ModelHelper) CheckHookIDExist(hookID int) (bool, error) {
+	targetSQL := "SELECT COUNT(*) FROM hooks WHERE hook_id=?"
+	rows, err := mh.Db.Query(targetSQL, hookID)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var count int
+		rows.Scan(&count)
+		if count == 0 {
+			return false, nil
+		}
+		return true, nil
+	}
+	return false, nil
+}
+
+func (mh ModelHelper) UpdateHook(hookID int, branchName string, targetDir string) error {
+	now := time.Now().UTC().Format("2006-01-02 15:04:05")
+	hookStatus := "ready"
+	logContent := ""
+	targetSQL := "UPDATE hooks SET which_branch=?, target_dir=?, hook_status=?, log_content=?, updated_time=? WHERE hook_id=?"
+	if _, err := mh.Db.Exec(targetSQL, branchName, targetDir, hookStatus, logContent, now, hookID); err != nil {
+		fmt.Println(err.Error())
+		return err
+	}
+	return nil
+}

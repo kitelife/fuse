@@ -86,12 +86,13 @@ $(function() {
         });
     });
 
-    $('td.branch-name').on('dblclick', function(e) {
+    $('a.delete-it').on('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
 
-        var hookID = $(this).prev('.hook-id').text(),
-            branchName = $(this).text();
+        var myParent = $(this).parent(),
+            hookID = myParent.siblings('.hook-id').text(),
+            branchName = myParent.siblings('.branch-name').text();
 
         alertify.confirm('你确定删除' + branchName +'分支Hook吗？', function (e) {
             if (e) {
@@ -122,11 +123,61 @@ $(function() {
         });
     });
 
+    $('a.modify-it').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        var myParent = $(this).parent(),
+            hookID = myParent.siblings('.hook-id').text(),
+            branchName = myParent.siblings('.branch-name').text(),
+            targetDir = myParent.siblings('.target-dir').text();
+
+        $('input[name="branch_name_update"]').val(branchName);
+        $('input[name="target_dir_update"]').val(targetDir);
+        $('input[name="hook_id_to_update"]').val(hookID);
+
+        $('#update_hook_modal').modal('show');
+    });
+
+    $('#button_update_hook').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        var branchNameUpdate = $('input[name="branch_name_update"]').val(),
+            targetDirUpdate = $('input[name="target_dir_update"]').val(),
+            hookIDToUpdate = $('input[name="hook_id_to_update"]').val();
+
+        if (branchNameUpdate === '' || targetDirUpdate === '') {
+            alertify.log('分支名和目标目录不能为空', 'error', 5000);
+            return;
+        }
+
+        var req = $.ajax({
+            'type': 'post',
+            'url': '/update/hook',
+            'data': {
+                hook_id: hookIDToUpdate,
+                branch_name: branchNameUpdate,
+                target_dir: targetDirUpdate
+            },
+            'dataType': 'json'
+        });
+
+        req.done(function (resp) {
+            if (resp.Status === 'success') {
+                alertify.log(resp.Msg, 'success', 1000);
+                setTimeout("window.location.href='/'", 1500);
+            } else {
+                alertify.log(resp.Msg, 'error', 5000);
+            }
+        });
+    });
+
     $('.repos-title').on('dblclick', function(e) {
         e.preventDefault();
         e.stopPropagation();
 
-        var targetElement = $(this).children('.panel-title').children('span');
+        var targetElement = $(this).children('.panel-title').children('span'),
             reposID = targetElement.attr('title'),
             reposName = targetElement.text();
         alertify.confirm('你确定删除' + reposName +'仓库吗？', function (e) {
