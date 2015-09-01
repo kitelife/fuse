@@ -72,7 +72,7 @@ func (pr PullReposStruct) Run(chanElement models.ChanElementStruct) bool {
     // 拉取所有分支
     if isNew == false {
         pullCMD := exec.Command("git", "pull", "-p")
-        output, err = pullCMD.Output()
+        output, err := pullCMD.Output()
         if err != nil {
             errMsg := fmt.Sprintf("%s; %s", string(output), err.Error())
             chanElement.Mh.UpdateLogStatus(chanElement.HookID, "failure", errMsg)
