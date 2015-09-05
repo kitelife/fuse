@@ -1,4 +1,8 @@
 $(function() {
+    // Switches
+    if ($('[data-toggle="switch"]').length) {
+      $('[data-toggle="switch"]').bootstrapSwitch();
+    }
 
     alertify.set({
         buttonReverse: true,
@@ -91,8 +95,13 @@ $(function() {
         e.stopPropagation();
 
         var myParent = $(this).parent(),
-            hookID = myParent.siblings('.hook-id').text(),
-            branchName = myParent.siblings('.branch-name').text();
+            hookID = myParent.siblings('.hook-id').text();
+
+        $('input[name="hook_id_to_delete"]').val(hookID);
+
+        $('#delete_hook_modal').modal('show');
+
+        /*
 
         alertify.confirm('你确定删除' + branchName +'分支Hook吗？', function (e) {
             if (e) {
@@ -121,6 +130,7 @@ $(function() {
                 alertify.log('你选择了"否"', '', 2000);
             }
         });
+        */
     });
 
     $('a.modify-it').on('click', function(e) {
@@ -171,6 +181,37 @@ $(function() {
                 alertify.log(resp.Msg, 'error', 5000);
             }
         });
+    });
+
+    $('#button_delete_hook').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        var targetHookID = $('input[name="hook_id_to_delete"]').val(),
+            alsoDeleteTargetDir = $('input[name="rm_target_dir"]').prop('checked');
+
+        $('#delete_hook_modal').modal('hide');
+
+        var req = $.ajax({
+            'type': 'post',
+            'url': '/delete/hook',
+            'data': {
+                hook_id: targetHookID,
+                erase_all: alsoDeleteTargetDir
+            },
+            'dataType': 'json'
+        });
+
+        req.done(function (resp) {
+            if (resp.Status === 'success') {
+                alertify.log(resp.Msg, 'success', 1000);
+                setTimeout("window.location.href='/'", 1500);
+            } else {
+                alertify.log(resp.Msg, 'error', 5000);
+            }
+        });
+
+
     });
 
     $('.repos-title').on('dblclick', function(e) {
