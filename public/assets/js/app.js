@@ -100,37 +100,6 @@ $(function() {
         $('input[name="hook_id_to_delete"]').val(hookID);
 
         $('#delete_hook_modal').modal('show');
-
-        /*
-
-        alertify.confirm('你确定删除' + branchName +'分支Hook吗？', function (e) {
-            if (e) {
-                alertify.log('你选择了"是"', '', 2000);
-                var req = $.ajax({
-                    'type': 'post',
-                    'url': '/delete/hook',
-                    'data': {
-                        hook_id: hookID,
-                        erase_all: "true"
-                    },
-                    'dataType': 'json'
-                });
-
-                req.done(function (resp) {
-                    if (resp.Status === 'success') {
-                        alertify.log(resp.Msg, 'success', 1000);
-                        setTimeout("window.location.href='/'", 1500);
-                    } else {
-                        alertify.log(resp.Msg, 'error', 5000);
-                    }
-
-                });
-
-            } else {
-                alertify.log('你选择了"否"', '', 2000);
-            }
-        });
-        */
     });
 
     $('a.modify-it').on('click', function(e) {
