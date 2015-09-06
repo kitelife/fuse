@@ -1,8 +1,15 @@
 $(function() {
+
+    var targetSwitchEle = $('input[name="rm_target_dir"]');
     // Switches
-    if ($('[data-toggle="switch"]').length) {
-      $('[data-toggle="switch"]').bootstrapSwitch();
+    if (targetSwitchEle.length) {
+      targetSwitchEle.bootstrapSwitch();
     }
+
+    // 监听modal隐藏事件
+    $('#delete_hook_modal').on('hide.bs.modal', function(e) {
+        targetSwitchEle.bootstrapSwitch('state', false);
+    });
 
     alertify.set({
         buttonReverse: true,
@@ -157,7 +164,7 @@ $(function() {
         e.stopPropagation();
 
         var targetHookID = $('input[name="hook_id_to_delete"]').val(),
-            alsoDeleteTargetDir = $('input[name="rm_target_dir"]').prop('checked');
+            alsoDeleteTargetDir = targetSwitchEle.prop('checked');
 
         $('#delete_hook_modal').modal('hide');
 
