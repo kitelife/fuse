@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"config"
+	"github.com/youngsterxyf/fuse/config"
 )
 
 type ModelHelper struct {

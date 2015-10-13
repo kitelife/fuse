@@ -15,12 +15,12 @@ import (
 	"github.com/martini-contrib/auth"
 	_ "github.com/mattn/go-sqlite3"
 
-	"adapter_manager"
-	_ "adapters"
-	"config"
-	"middleware_manager"
-	_ "middlewares"
-	"models"
+	"github.com/youngsterxyf/fuse/adapter_manager"
+	_ "github.com/youngsterxyf/fuse/adapters"
+	"github.com/youngsterxyf/fuse/config"
+	"github.com/youngsterxyf/fuse/middleware_manager"
+	_ "github.com/youngsterxyf/fuse/middlewares"
+	"github.com/youngsterxyf/fuse/models"
 )
 
 var runTimeBasePath string
@@ -241,15 +241,15 @@ func updateHook(w http.ResponseWriter, req *http.Request) {
 	}
 	targetDir, _ = filepath.Abs(targetDir)
 	/*
-	if utils.CheckPathExist(targetDir) == false {
-		w.Write(genResponseStr("failure", "不存在目标目录"))
-		return
-	}
+		if utils.CheckPathExist(targetDir) == false {
+			w.Write(genResponseStr("failure", "不存在目标目录"))
+			return
+		}
 	*/
 
 	if err := mh.UpdateHook(hookID, branchName, targetDir); err != nil {
 		w.Write(genResponseStr("failure", err.Error()))
-		return;
+		return
 	}
 	w.Write(genResponseStr("success", "成功更新钩子"))
 	return
