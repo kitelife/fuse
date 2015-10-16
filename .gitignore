@@ -1,3 +1,4 @@
 bin/
 pkg/
 Godeps/_workspace/
+public/assets/lib/
