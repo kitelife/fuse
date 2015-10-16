@@ -19,6 +19,7 @@
   ],
   "dependencies": {
     "bootstrap": "~3.3.5",
-    "alertify": "~0.3.10"
+    "alertify": "~0.3.10",
+    "flat-ui": "~2.2.2"
   }
 }
